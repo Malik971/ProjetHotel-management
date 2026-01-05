@@ -8,6 +8,7 @@ import InscriptionUser from "./Pages/InscriptionUser";
 import DetailsPage from "./Pages/DetailsPage";
 
 // ADMIN
+import ChambreManagementPage from "./Pages/ChambreManagementPage";
 import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminUsers from "./Pages/admin/AdminUsers";
 import CrudHotel from "./Pages/admin/CrudHotel";
@@ -24,7 +25,13 @@ function App() {
                 {/* Pages AVEC layout */}
                 <Route element={<MainLayout />}>
                     <Route path="/" element={<HomePage />} />
-                    <Route path="/hotel/:id" element={<DetailsPage />} />
+                     {/* Page détails d'un hôtel avec ses chambres */}
+                           <Route path="/hotel/:hotelId" element={<DetailsPage />} />
+
+                            {/* Page de gestion des chambres (Admin) */}
+                            <Route path="/chambres" element={<ChambreManagementPage />} />
+
+
                 </Route>
 
                 {/* Auth */}

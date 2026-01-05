@@ -19,7 +19,7 @@ export default function AdminDashboard() {
           <p>Créer un nouvel hôtel</p>
         </div>
 
-        <div className="admin-card" onClick={() => navigate("/admin/add-room")}>
+        <div className="admin-card" onClick={() => navigate("/chambres")}>
           <h2>🛏️ Ajouter chambre</h2>
           <p>Ajouter une chambre à un hôtel</p>
         </div>
