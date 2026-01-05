@@ -1,0 +1,30 @@
+[33m16c5c14[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mCorrection-crud-hotel[m[33m)[m HEAD@{0}: checkout: moving from feature/frontend to Correction-crud-hotel
+[33m433871e[m[33m ([m[1;31morigin/feature/frontend[m[33m, [m[1;32mfeature/frontend[m[33m)[m HEAD@{1}: checkout: moving from Correction-crud-hotel to feature/frontend
+[33m16c5c14[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mCorrection-crud-hotel[m[33m)[m HEAD@{2}: commit: Récupération du dossier DetailPages depuis feature/frontend
+[33m4ac39c0[m[33m ([m[1;31morigin/Correction-crud-hotel[m[33m)[m HEAD@{3}: commit: Correction-crud-hotel
+[33meb8e420[m HEAD@{4}: commit: Correction-crud-hotel
+[33m60b6593[m[33m ([m[1;31morigin/Correction-securisation-routes[m[33m, [m[1;32mCorrection-securisation-routes[m[33m)[m HEAD@{5}: checkout: moving from Correction-securisation-routes to Correction-crud-hotel
+[33m60b6593[m[33m ([m[1;31morigin/Correction-securisation-routes[m[33m, [m[1;32mCorrection-securisation-routes[m[33m)[m HEAD@{6}: commit: Sécurisation routes et ajout page administration
+[33m8e56d17[m[33m ([m[1;31morigin/securisation-routes-page-admin[m[33m, [m[1;32msecurisation-routes-page-admin[m[33m)[m HEAD@{7}: checkout: moving from securisation-routes-page-admin to Correction-securisation-routes
+[33m8e56d17[m[33m ([m[1;31morigin/securisation-routes-page-admin[m[33m, [m[1;32msecurisation-routes-page-admin[m[33m)[m HEAD@{8}: Branch: renamed refs/heads/Sécurisation-routes-et-création-page-administratio- to refs/heads/securisation-routes-page-admin
+[33m8e56d17[m[33m ([m[1;31morigin/securisation-routes-page-admin[m[33m, [m[1;32msecurisation-routes-page-admin[m[33m)[m HEAD@{10}: commit: Sécurisation-routes-et-création-page-administratio-
+[33m0a75b0f[m[33m ([m[1;31morigin/Ajout-rôles-et-crud[m[33m, [m[1;32mAjout-rôles-et-crud[m[33m)[m HEAD@{11}: checkout: moving from Ajout-rôles-et-crud to Sécurisation-routes-et-création-page-administratio-
+[33m0a75b0f[m[33m ([m[1;31morigin/Ajout-rôles-et-crud[m[33m, [m[1;32mAjout-rôles-et-crud[m[33m)[m HEAD@{12}: reset: moving to HEAD
+[33m0a75b0f[m[33m ([m[1;31morigin/Ajout-rôles-et-crud[m[33m, [m[1;32mAjout-rôles-et-crud[m[33m)[m HEAD@{13}: commit: Ajout rôles et crud hotel
+[33mc6774a0[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{14}: checkout: moving from main to Ajout-rôles-et-crud
+[33mc6774a0[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{15}: checkout: moving from main to main
+[33mc6774a0[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{16}: checkout: moving from feature/nouvelle-fonctionnalité to main
+[33m09d989b[m[33m ([m[1;31morigin/feature/nouvelle-fonctionnalité[m[33m, [m[1;32mfeature/nouvelle-fonctionnalité[m[33m)[m HEAD@{17}: commit: commit
+[33mc6774a0[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{18}: checkout: moving from main to feature/nouvelle-fonctionnalité
+[33mc6774a0[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{19}: checkout: moving from feature/frontend to main
+[33m3734b04[m HEAD@{20}: checkout: moving from main to feature/frontend
+[33mc6774a0[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m HEAD@{21}: commit: Ajout de la connexion et inscription back-end
+[33m1cecd8c[m[33m ([m[1;31morigin/Malik[m[33m)[m HEAD@{22}: checkout: moving from main to main
+[33m1cecd8c[m[33m ([m[1;31morigin/Malik[m[33m)[m HEAD@{23}: commit (amend): Ajout de la connexion à database
+[33mc6d2a2c[m HEAD@{24}: reset: moving to HEAD
+[33mc6d2a2c[m HEAD@{25}: commit: Ajout de la connexion à database
+[33me020f32[m HEAD@{26}: checkout: moving from main to main
+[33me020f32[m HEAD@{27}: checkout: moving from master to main
+[33me020f32[m HEAD@{28}: Branch: renamed refs/heads/main to refs/heads/master
+[33me020f32[m HEAD@{30}: Branch: renamed refs/heads/master to refs/heads/main
+[33me020f32[m HEAD@{32}: commit (initial): Initial commit
