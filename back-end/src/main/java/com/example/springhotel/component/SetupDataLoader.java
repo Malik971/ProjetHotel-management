@@ -19,8 +19,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Component
-public class SetupDataLoader implements
-        ApplicationListener<ContextRefreshedEvent> {
+public class  SetupDataLoader implements ApplicationListener<ContextRefreshedEvent> {
 
     boolean alreadySetup = false;
 
@@ -52,15 +51,17 @@ public class SetupDataLoader implements
         createRoleIfNotFound("ROLE_ADMIN", adminPrivileges);
         createRoleIfNotFound("ROLE_USER", Arrays.asList(readPrivilege));
 
-        Role adminRole = roleRepository.findByName("ROLE_ADMIN");
-        User user = new User();
-        user.setFirstName("Test");
-        user.setLastName("Test");
-        user.setPassword(passwordEncoder.encode("test"));
-        user.setEmail("test@test.com");
-        user.setRoles(Arrays.asList(adminRole));
-        user.setEnabled(true);
-        userRepository.save(user);
+        if (userRepository.findByEmail("test@test.com").isEmpty()) {
+            Role adminRole = roleRepository.findByName("ROLE_ADMIN");
+            User user = new User();
+            user.setFirstName("Test");
+            user.setLastName("Test");
+            user.setPassword(passwordEncoder.encode("test123"));
+            user.setEmail("test@test.com");
+            user.setRoles(Arrays.asList(adminRole));
+            user.setEnabled(true);
+            userRepository.save(user);
+        }
 
         alreadySetup = true;
     }

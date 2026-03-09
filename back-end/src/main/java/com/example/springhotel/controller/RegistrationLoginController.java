@@ -44,8 +44,9 @@ public class RegistrationLoginController {
         if (request.getPassword() == null || request.getPassword().length() < 6) {
             return ResponseEntity.badRequest().body(Map.of("error", "Mot de passe trop court (min 6 caractères)"));
         }
-        if (userRepository.findByEmail(request.getEmail()) != null) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Email déjà utilisé"));
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", "Email déjà utilisé"));
         }
 
         // 🔐 Récupère le rôle
