@@ -10,7 +10,7 @@ export const useDisponibilite = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/disponibilite/chambre/${chambreId}?dateArrivee=${dateArrivee}&dateDepart=${dateDepart}`
+        `${import.meta.env.VITE_API_URL}/api/disponibilite/chambre/${chambreId}?dateArrivee=${dateArrivee}&dateDepart=${dateDepart}`
       );
 
       if (!response.ok) {
@@ -33,7 +33,7 @@ export const useDisponibilite = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:8080/api/disponibilite/hotel/${hotelId}?dateArrivee=${dateArrivee}&dateDepart=${dateDepart}`
+        `${import.meta.env.VITE_API_URL}/api/disponibilite/hotel/${hotelId}?dateArrivee=${dateArrivee}&dateDepart=${dateDepart}`
       );
 
       if (!response.ok) {

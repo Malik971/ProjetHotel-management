@@ -20,7 +20,7 @@ export default function DetailsPage() {
       return;
     }
 
-    fetch(`http://localhost:8080/api/hotels/${hotelId}`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/hotels/${hotelId}`)
       .then((response) => {
         if (!response.ok) throw new Error('Hôtel non trouvé');
         return response.json();

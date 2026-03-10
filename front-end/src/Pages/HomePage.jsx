@@ -25,7 +25,7 @@ export default function HomePage() {
     } catch (error) {
       console.error("Erreur lors du chargement des hôtels:", error);
       // Fallback sur l'ancienne méthode si le hook échoue
-      fetch("http://localhost:8080/api/hotels")
+      fetch(`${import.meta.env.VITE_API_URL}/api/hotels`)
         .then((response) => response.json())
         .then((data) => {
           setAllHotels(data);

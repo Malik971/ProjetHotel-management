@@ -10,7 +10,7 @@ export const useHotelSearch = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8080/api/hotels/search', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/hotels/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,7 +37,7 @@ export const useHotelSearch = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8080/api/hotels/all');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/hotels/all`);
 
       if (!response.ok) {
         throw new Error('Erreur lors du chargement');
