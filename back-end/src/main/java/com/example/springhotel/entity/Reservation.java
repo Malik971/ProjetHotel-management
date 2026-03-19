@@ -62,7 +62,7 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     @JsonIgnore
-    private User user;
+    private Users users;
 
     // Métadonnées
     @Column(nullable = false, updatable = false)

@@ -56,7 +56,7 @@ function App() {
                 } />
 
                 <Route
-                    path="/admin/add-user"
+                    path="/admin/add-users"
                     element={
                         <ProtectedRoute roleRequired="ROLE_ADMIN">
                             <AdminUsers />

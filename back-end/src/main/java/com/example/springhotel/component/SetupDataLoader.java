@@ -1,6 +1,6 @@
 package com.example.springhotel.component;
 
-import com.example.springhotel.entity.User;
+import com.example.springhotel.entity.Users;
 import org.springframework.stereotype.Component;
 
 import com.example.springhotel.entity.Privilege;
@@ -53,14 +53,14 @@ public class  SetupDataLoader implements ApplicationListener<ContextRefreshedEve
 
         if (userRepository.findByEmail("test@test.com").isEmpty()) {
             Role adminRole = roleRepository.findByName("ROLE_ADMIN");
-            User user = new User();
-            user.setFirstName("Test");
-            user.setLastName("Test");
-            user.setPassword(passwordEncoder.encode("test123"));
-            user.setEmail("test@test.com");
-            user.setRoles(Arrays.asList(adminRole));
-            user.setEnabled(true);
-            userRepository.save(user);
+            Users users = new Users();
+            users.setFirstName("Test");
+            users.setLastName("Test");
+            users.setPassword(passwordEncoder.encode("test123"));
+            users.setEmail("test@test.com");
+            users.setRoles(Arrays.asList(adminRole));
+            users.setEnabled(true);
+            userRepository.save(users);
         }
 
         alreadySetup = true;

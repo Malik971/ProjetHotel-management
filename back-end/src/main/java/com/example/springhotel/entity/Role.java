@@ -19,7 +19,7 @@ public class Role {
 
     @ManyToMany(mappedBy = "roles")
     @JsonIgnore // Evite la boucle infinie
-    private Collection<User> userEntities;
+    private Collection<Users> usersEntities;
 
     @ManyToMany
     @JoinTable(

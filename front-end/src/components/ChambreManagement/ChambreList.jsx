@@ -44,7 +44,7 @@ export default function ChambreList({ chambres, loading, error, onEdit, onDelete
               </td>
               <td className="px-6 py-4 text-sm">{chambre.hotelNom}</td>
               <td className="px-6 py-4 text-sm font-semibold">{chambre.prixParNuit}€</td>
-              <td className="px-6 py-4 text-sm">{chambre.capacite} pers.</td>
+              <td className="px-6 py-4 text-sm">{chambre.capacity} pers.</td>
               <td className="px-6 py-4 text-sm space-x-2">
                 <button
                   onClick={() => onEdit(chambre)}

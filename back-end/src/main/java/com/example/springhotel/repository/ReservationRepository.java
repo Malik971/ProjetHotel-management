@@ -12,10 +12,7 @@ import java.util.List;
 @Repository
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
-    /**
-     * Récupérer toutes les réservations d'un utilisateur, triées par date de début décroissante
-     */
-    List<Reservation> findByUserIdOrderByDateDebutDesc(Long userId);
+    List<Reservation> findByUsersIdOrderByDateDebutDesc(Long usersId);
 
     /**
      * Vérifier la disponibilité d'une chambre pour une période donnée
@@ -95,7 +92,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     /**
      * Récupérer les réservations futures d'un utilisateur
      */
-    @Query("SELECT r FROM Reservation r WHERE r.user.id = :userId " +
+    @Query("SELECT r FROM Reservation r WHERE r.users.id = :userId " +
             "AND r.dateDebut >= :today " +
             "AND r.statut != 'ANNULEE' " +
             "ORDER BY r.dateDebut ASC")
@@ -107,7 +104,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     /**
      * Récupérer les réservations passées d'un utilisateur
      */
-    @Query("SELECT r FROM Reservation r WHERE r.user.id = :userId " +
+    @Query("SELECT r FROM Reservation r WHERE r.users.id = :userId " +
             "AND r.dateFin < :today " +
             "ORDER BY r.dateFin DESC")
     List<Reservation> findPastReservationsByUserId(

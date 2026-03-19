@@ -37,7 +37,7 @@ export default function RoomCard({ chambre, onReserver }) {
         <div className="space-y-2 mb-4">
           <p className="text-gray-600 flex items-center">
             <span className="mr-2">👥</span>
-            Capacité : {chambre.capacite || 'N/A'} personnes
+            Capacité : {chambre.capacity || 'N/A'} personnes
           </p>
 
           <p className="text-gray-600 flex items-center">

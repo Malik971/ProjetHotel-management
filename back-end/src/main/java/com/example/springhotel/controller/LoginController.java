@@ -1,6 +1,6 @@
 package com.example.springhotel.controller;
 
-import com.example.springhotel.entity.User;
+import com.example.springhotel.entity.Users;
 import com.example.springhotel.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -26,29 +26,29 @@ public class LoginController {
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
 
         // Utilisation de Optional<User>
-        Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
+        Optional<Users> userOptional = userRepository.findByEmail(loginRequest.getEmail());
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.badRequest().body("Utilisateur non trouvé");
         }
 
-        User existingUser = userOptional.get();
+        Users existingUsers = userOptional.get();
 
-        if (!passwordEncoder.matches(loginRequest.getPassword(), existingUser.getPassword())) {
+        if (!passwordEncoder.matches(loginRequest.getPassword(), existingUsers.getPassword())) {
             return ResponseEntity.badRequest().body("Mot de passe incorrect");
         }
 
         // Connexion réussie → renvoyer les infos utiles avec les rôles
-        List<String> roles = existingUser.getRoles()
+        List<String> roles = existingUsers.getRoles()
                 .stream()
                 .map(role -> role.getName())
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(new UserResponse(
-                existingUser.getId(),
-                existingUser.getEmail(),
-                existingUser.getFirstName(),
-                existingUser.getLastName(),
+                existingUsers.getId(),
+                existingUsers.getEmail(),
+                existingUsers.getFirstName(),
+                existingUsers.getLastName(),
                 roles
         ));
     }

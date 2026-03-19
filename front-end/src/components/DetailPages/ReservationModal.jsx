@@ -169,7 +169,7 @@ export default function ReservationModal({ chambre, onClose, onSuccess }) {
               value={formData.nombrePersonnes}
               onChange={handleChange}
               min="1"
-              max={chambre.capacite || 10}
+              max={chambre.capacity || 10}
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />

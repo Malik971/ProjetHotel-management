@@ -4,7 +4,7 @@ import com.example.springhotel.dto.ReservationRequestDTO;
 import com.example.springhotel.dto.ReservationResponseDTO;
 import com.example.springhotel.entity.Chambre;
 import com.example.springhotel.entity.Reservation;
-import com.example.springhotel.entity.User;
+import com.example.springhotel.entity.Users;
 import com.example.springhotel.repository.ChambreRepository;
 import com.example.springhotel.repository.ReservationRepository;
 import com.example.springhotel.repository.UserRepository;
@@ -33,9 +33,9 @@ public class ReservationService {
                 .orElseThrow(() -> new RuntimeException("Chambre non trouvée"));
 
         // 2. Récupérer l'utilisateur (optionnel si connecté)
-        User user = null;
+        Users users = null;
         if (userEmail != null) {
-            user = userRepository.findByEmail(userEmail).orElse(null);
+            users = userRepository.findByEmail(userEmail).orElse(null);
         }
 
         // 3. Vérifier la disponibilité
@@ -59,7 +59,7 @@ public class ReservationService {
         // 6. Créer la réservation
         Reservation reservation = Reservation.builder()
                 .chambre(chambre)
-                .user(user)
+                .users(users)
                 .dateDebut(request.getDateDebut())
                 .dateFin(request.getDateFin())
                 .nomClient(request.getNomClient())
@@ -96,7 +96,7 @@ public class ReservationService {
     private ReservationResponseDTO convertToDTO(Reservation reservation) {
         return ReservationResponseDTO.builder()
                 .id(reservation.getId())
-                .userId(reservation.getUser() != null ? reservation.getUser().getId() : null)
+                .userId(reservation.getUsers() != null ? reservation.getUsers().getId() : null)
                 .chambreId(reservation.getChambre().getId())
                 .chambreNom(reservation.getChambre().getNom())
                 .hotelId(reservation.getChambre().getHotel().getId())

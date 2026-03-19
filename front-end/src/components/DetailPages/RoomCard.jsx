@@ -94,7 +94,7 @@ export default function RoomCard({ chambre, onReserver }) {
             </span> / nuit
           </p>
 
-          <p>👥 {chambre.capacite || 0} personne{chambre.capacite > 1 ? 's' : ''}</p>
+          <p>👥 {chambre.capacity || 0} personne{chambre.capacity > 1 ? 's' : ''}</p>
           <p>📐 {chambre.superficie || 0} m²</p>
           <p>🛏️ {chambre.typeLit || 'Non spécifié'}</p>
         </div>

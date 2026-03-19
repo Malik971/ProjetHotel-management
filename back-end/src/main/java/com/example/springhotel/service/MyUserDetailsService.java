@@ -2,7 +2,7 @@ package com.example.springhotel.service;
 
 import com.example.springhotel.entity.Privilege;
 import com.example.springhotel.entity.Role;
-import com.example.springhotel.entity.User;
+import com.example.springhotel.entity.Users;
 import com.example.springhotel.repository.RoleRepository;
 import com.example.springhotel.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -34,7 +34,7 @@ public class MyUserDetailsService implements UserDetailsService {
             throws UsernameNotFoundException {
 
         // ✅ Utilisation de Optional<User>
-        Optional<User> userOptional = userRepository.findByEmail(email);
+        Optional<Users> userOptional = userRepository.findByEmail(email);
 
         // ✅ Vérification avec Optional
         if (userOptional.isEmpty()) {
@@ -43,16 +43,16 @@ public class MyUserDetailsService implements UserDetailsService {
             );
         }
 
-        User user = userOptional.get();
+        Users users = userOptional.get();
 
         return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                user.isEnabled(),
+                users.getEmail(),
+                users.getPassword(),
+                users.isEnabled(),
                 true, // accountNonExpired
                 true, // credentialsNonExpired
                 true, // accountNonLocked
-                getAuthorities(user.getRoles())
+                getAuthorities(users.getRoles())
         );
     }
 

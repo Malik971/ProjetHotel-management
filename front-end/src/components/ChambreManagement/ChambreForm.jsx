@@ -4,7 +4,7 @@ export default function ChambreForm({ chambre, onSubmit, onCancel }) {
   const [formData, setFormData] = useState({
     nom: '',
     prixParNuit: '',
-    capacite: 1,
+    capacity: 1,
     superficie: '',
     typeLit: '',
     description: '',
@@ -59,7 +59,7 @@ e.preventDefault();
 onSubmit({
 ...formData,
 prixParNuit: parseFloat(formData.prixParNuit),
-capacite: parseInt(formData.capacite),
+capacity: parseInt(formData.capacity),
 superficie: parseInt(formData.superficie),
 hotelId: parseInt(formData.hotelId)
 });
@@ -101,7 +101,7 @@ return (
         <input
           type="number"
           name="capacite"
-          value={formData.capacite}
+          value={formData.capacity}
           onChange={handleChange}
           required
           min="1"

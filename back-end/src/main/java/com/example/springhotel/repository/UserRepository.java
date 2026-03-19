@@ -1,15 +1,15 @@
 package com.example.springhotel.repository;
 
-import com.example.springhotel.entity.User;
+import com.example.springhotel.entity.Users;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<Users, Long> {
 
-    Optional<User> findByEmail(String email);
+    Optional<Users> findByEmail(String email);
 
     boolean existsByEmail(String email);
 }
