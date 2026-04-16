@@ -88,6 +88,14 @@ public class HotelController {
         hotel.setVille(hotelData.getVille());
         hotel.setDescription(hotelData.getDescription());
         hotel.setNoteMoyenne(hotelData.getNoteMoyenne());
+        hotel.setLatitude(hotelData.getLatitude());
+        hotel.setLongitude(hotelData.getLongitude());
+        hotel.setPrixMoyenNuit(hotelData.getPrixMoyenNuit());
+        hotel.setCategorie(hotelData.getCategorie());
+
+        if (hotelData.getEquipements() != null) {
+            hotel.setEquipements(hotelData.getEquipements());
+        }
 
         if (hotelData.getImageUrl() != null && !hotelData.getImageUrl().isEmpty()) {
             hotel.setImageUrl(hotelData.getImageUrl());

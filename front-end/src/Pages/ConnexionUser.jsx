@@ -18,7 +18,7 @@ export default function ConnextionUser() {
                 body: JSON.stringify(loginData)
             });
 
-            if (response.ok) {
+            if (response.ok === true) {
                 const data = await response.json();
 
                 // 🔹 Stocke l'ID, l'email et le premier rôle (Admin / Employé / User)

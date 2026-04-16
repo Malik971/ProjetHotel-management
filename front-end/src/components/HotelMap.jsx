@@ -1,203 +1,165 @@
-import { useEffect, useState } from "react";
-import BarRecherche from "../components/BarRecherche";
-import CardHotel from "../components/CardHotel";
-import Filter from "../components/filter";
-import HotelMap from "../components/HotelMap";
-import { useHotelSearch } from "../hooks/useHotelSearch";
+// src/components/HotelMap.jsx
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { useEffect } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-export default function HomePage() {
-  const [allHotels, setAllHotels] = useState([]);
-  const [displayedHotels, setDisplayedHotels] = useState([]);
-  const [showMap, setShowMap] = useState(false);
-  const [selectedHotelId, setSelectedHotelId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { hotels, loading, error, searchHotels } = useHotelSearch();
+// Fix l'icône par défaut de Leaflet (bug connu avec Webpack/Vite)
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
 
-  // Charger tous les hôtels au démarrage
+// Icône rouge pour l'hôtel sélectionné
+const selectedIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+// Composant interne pour re-centrer la carte quand la sélection change
+function MapFocus({ hotels, selectedHotelId }) {
+  const map = useMap();
+
   useEffect(() => {
-    console.log("🔄 Chargement des hôtels...");
-    setIsLoading(true);
-
-    fetch("http://localhost:8080/api/hotels")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("✅ Hôtels chargés:", data);
-        setAllHotels(data);
-        setDisplayedHotels(data);
-        setIsLoading(false);
-      })
-      .catch((error) => {
-        console.error("❌ Erreur lors du chargement des hôtels:", error);
-        setIsLoading(false);
-      });
-  }, []);
-
-  // Mettre à jour les hôtels affichés après une recherche
-  useEffect(() => {
-    if (hotels.length > 0) {
-      console.log("🔍 Résultats de recherche:", hotels);
-      setDisplayedHotels(hotels);
+    if (!selectedHotelId) return;
+    const hotel = hotels.find((h) => h.id === selectedHotelId);
+    if (hotel?.latitude && hotel?.longitude) {
+      map.flyTo([hotel.latitude, hotel.longitude], 14, { duration: 1 });
     }
-  }, [hotels]);
+  }, [selectedHotelId, hotels, map]);
 
-  const handleSearch = async (searchParams) => {
-    console.log("🔍 Recherche avec params:", searchParams);
-    await searchHotels(searchParams);
-  };
+  return null;
+}
 
-  const handleFilterChange = (filters) => {
-    console.log("🎯 Application des filtres:", filters);
+function renderStars(categorie = 0) {
+  const maxStars = 5;
+  let stars = "";
 
-    // Utiliser les résultats de recherche s'ils existent, sinon tous les hôtels
-    const baseHotels = hotels.length > 0 ? hotels : allHotels;
-
-    const filtered = baseHotels.filter(hotel => {
-      // Filtre prix
-      if (filters.prixMax && hotel.prixMoyenNuit > filters.prixMax) return false;
-      if (filters.prixMin && hotel.prixMoyenNuit < filters.prixMin) return false;
-
-      // Filtre catégorie
-      if (filters.categories && filters.categories.length > 0) {
-        if (!filters.categories.includes(hotel.categorie)) return false;
-      }
-
-      // Filtre notation
-      if (filters.notationMin && hotel.noteMoyenne < filters.notationMin) return false;
-
-      // Filtre équipements
-      if (filters.equipements && filters.equipements.length > 0) {
-        const hotelEquipements = hotel.equipements || [];
-        const hasAllEquipements = filters.equipements.every(eq =>
-          hotelEquipements.includes(eq)
-        );
-        if (!hasAllEquipements) return false;
-      }
-
-      return true;
-    });
-
-    console.log("✅ Hôtels filtrés:", filtered.length);
-    setDisplayedHotels(filtered);
-  };
-
-  const handleResetFilters = () => {
-    console.log("↺ Réinitialisation des filtres");
-    setDisplayedHotels(allHotels);
-  };
-
-  const handleHotelClick = (hotel) => {
-    setSelectedHotelId(hotel.id);
-    const element = document.getElementById(`hotel-${hotel.id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  for (let i = 1; i <= maxStars; i++) {
+    if (i <= categorie) {
+      stars += "★"; // pleine
+    } else {
+      stars += "☆"; // vide
     }
-  };
+  }
+
+  return stars;
+}
+
+// Composant principal — reçoit uniquement des props, n'a aucun état propre
+export default function HotelMap({ hotels = [], onHotelClick, selectedHotelId }) {
+  // Filtrer les hôtels sans coordonnées GPS
+  const hotelsAvecCoords = hotels.filter(
+      (h) => h.latitude != null && h.longitude != null
+  );
+
+  // Centre de la carte : moyenne des coordonnées, ou Paris par défaut
+  const center =
+      hotelsAvecCoords.length > 0
+          ? [
+            hotelsAvecCoords.reduce((acc, h) => acc + h.latitude, 0) / hotelsAvecCoords.length,
+            hotelsAvecCoords.reduce((acc, h) => acc + h.longitude, 0) / hotelsAvecCoords.length,
+          ]
+          : [48.8566, 2.3522]; // Paris par défaut
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <BarRecherche onSearch={handleSearch} />
+      <MapContainer
+          center={center}
+          zoom={12}
+          style={{ height: "100%", width: "100%", borderRadius: "0.5rem" }}
+          scrollWheelZoom={true}
+      >
+        {/* Fond de carte OpenStreetMap (gratuit, pas de clé API) */}
+        <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
 
-      <div className="w-[90%] mx-auto mt-10">
-        {/* Bouton pour basculer entre liste et carte */}
-        <div className="flex justify-end mb-4 gap-3">
-          <button
-            onClick={() => setShowMap(false)}
-            className={`px-6 py-2 rounded-lg font-semibold transition ${
-              !showMap
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-700 border border-gray-300"
-            }`}
-          >
-            📋 Liste
-          </button>
-          <button
-            onClick={() => setShowMap(true)}
-            className={`px-6 py-2 rounded-lg font-semibold transition ${
-              showMap
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-700 border border-gray-300"
-            }`}
-          >
-            🗺️ Carte
-          </button>
-        </div>
+        {/* Re-centrage automatique sur l'hôtel sélectionné */}
+        <MapFocus hotels={hotelsAvecCoords} selectedHotelId={selectedHotelId} />
 
-        <div className="flex gap-6">
-          <Filter
-            onFilterChange={handleFilterChange}
-            onReset={handleResetFilters}
-          />
+        {/* Un marqueur par hôtel */}
+        {hotelsAvecCoords.map((hotel) => (
+            <Marker
+                key={hotel.id}
+                position={[hotel.latitude, hotel.longitude]}
+                icon={selectedHotelId === hotel.id ? selectedIcon : new L.Icon.Default()}
+                eventHandlers={{
+                  click: () => onHotelClick && onHotelClick(hotel),
+                }}
+            >
+              <Popup>
+                <div style={{ minWidth: "160px" }}>
+                  {hotel.imageUrl && (
+                      <img
+                          src={hotel.imageUrl}
+                          alt={hotel.nom}
+                          style={{
+                            width: "100%",
+                            height: "80px",
+                            objectFit: "cover",
+                            borderRadius: "4px",
+                            marginBottom: "6px",
+                          }}
+                      />
+                  )}
+                  <strong style={{ fontSize: "14px" }}>{hotel.nom}</strong>
+                  <p style={{ margin: "2px 0", fontSize: "12px", color: "#555" }}>
+                    {hotel.ville}
+                  </p>
+                  {hotel.prixMoyenNuit && (
+                      <p style={{ margin: "2px 0", fontSize: "13px", fontWeight: "bold", color: "#2563eb" }}>
+                        À partir de {hotel.prixMoyenNuit}€ / nuit
+                      </p>
+                  )}
+                  {hotel.noteMoyenne && (
+                      <p style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        {[1,2,3,4,5].map((i) => (
+                            <span
+                                key={i}
+                                style={{
+                                  color: i <= hotel.categorie ? "#f59e0b" : "#e5e7eb",
+                                  fontSize: "16px"
+                                }}
+                            >
+      ★
+    </span>
+                        ))}
+                        <span style={{ marginLeft: "6px", fontSize: "12px", color: "#555" }}>
+    {hotel.categorie}/5
+  </span>
+                      </p>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+        ))}
 
-          <div className="flex-1">
-            {(loading || isLoading) && (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <p className="ml-4 text-gray-600">Chargement des hôtels...</p>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                ❌ {error}
-              </div>
-            )}
-
-            {!loading && !isLoading && !error && displayedHotels.length === 0 && (
-              <div className="text-center py-20">
-                <p className="text-gray-500 text-xl">
-                  😔 Aucun hôtel ne correspond à vos critères
-                </p>
-                <button
-                  onClick={handleResetFilters}
-                  className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-                >
-                  Réinitialiser les filtres
-                </button>
-              </div>
-            )}
-
-            {!loading && !isLoading && !error && displayedHotels.length > 0 && (
-              <>
-                {!showMap ? (
-                  <div>
-                    <p className="text-gray-600 mb-4 font-medium">
-                      🏨 {displayedHotels.length} hôtel(s) trouvé(s)
-                    </p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {displayedHotels.map((hotel) => (
-                        <div
-                          key={hotel.id}
-                          id={`hotel-${hotel.id}`}
-                          className={`transition-all ${
-                            selectedHotelId === hotel.id
-                              ? "ring-4 ring-blue-500 rounded-lg"
-                              : ""
-                          }`}
-                        >
-                          <CardHotel hotel={hotel} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-[700px]">
-                    <HotelMap
-                      hotels={displayedHotels}
-                      onHotelClick={handleHotelClick}
-                      selectedHotelId={selectedHotelId}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+        {/* Message si aucun hôtel n'a de coordonnées */}
+        {hotelsAvecCoords.length === 0 && hotels.length > 0 && (
+            <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  background: "white",
+                  padding: "12px 20px",
+                  borderRadius: "8px",
+                  zIndex: 1000,
+                  fontSize: "14px",
+                  color: "#555",
+                }}
+            >
+              Aucun hôtel n'a de coordonnées GPS renseignées
+            </div>
+        )}
+      </MapContainer>
   );
 }
