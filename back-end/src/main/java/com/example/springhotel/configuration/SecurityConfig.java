@@ -72,6 +72,7 @@ public class SecurityConfig {
 
         // Autorise React sur localhost:5173 ou tout autre port
         config.addAllowedOriginPattern("http://localhost:*");
+        config.addAllowedOriginPattern("https://hotel-montpellier.netlify.app");
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
 
