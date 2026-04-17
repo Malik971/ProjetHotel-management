@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api/chambres';
+const API_BASE_URL = `${import.meta.env.VITE_API_URL}/api/chambres`;
 
 const chambreService = {
   // Récupérer toutes les chambres
