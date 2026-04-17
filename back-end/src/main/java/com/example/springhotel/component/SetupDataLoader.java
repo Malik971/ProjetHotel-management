@@ -1,6 +1,7 @@
 package com.example.springhotel.component;
 
 import com.example.springhotel.entity.Users;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.stereotype.Component;
 
 import com.example.springhotel.entity.Privilege;
@@ -19,7 +20,7 @@ import java.util.Collection;
 import java.util.List;
 
 @Component
-public class  SetupDataLoader implements ApplicationListener<ContextRefreshedEvent> {
+public class  SetupDataLoader implements ApplicationListener<ApplicationReadyEvent> {
 
     boolean alreadySetup = false;
 
@@ -37,7 +38,7 @@ public class  SetupDataLoader implements ApplicationListener<ContextRefreshedEve
 
     @Override
     @Transactional
-    public void onApplicationEvent(ContextRefreshedEvent event) {
+    public void onApplicationEvent(ApplicationReadyEvent event) {
 
         if (alreadySetup)
             return;
