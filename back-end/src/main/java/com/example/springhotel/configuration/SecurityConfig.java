@@ -45,6 +45,9 @@ public class SecurityConfig {
                         // Autres API publiques
                         .requestMatchers("/api/**").permitAll()
 
+                        // Pour https://dashboard.uptimerobot.com/monitors toutes les 5 min
+                        .requestMatchers("/test").permitAll()
+
                         // Tout le reste nécessite authentification
                         .anyRequest().authenticated()
                 )
