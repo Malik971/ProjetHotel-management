@@ -1,292 +1,300 @@
-  // front-end/src/Pages/HomePage.jsx (version complète)
-  import { useEffect, useState } from "react";
-  import BarRecherche from "../components/BarRecherche";
-  import CardHotel from "../components/CardHotel";
-  import HotelMap from "../components/HotelMap";
-  import { useHotelSearch } from "../hooks/useHotelSearch";
-  import Filter from "../components/FilterPro.jsx";
+// src/Pages/HomePage.jsx
+import { useEffect, useState } from "react";
+import BarRecherche from "../components/BarRecherche";
+import CardHotel from "../components/CardHotel";
+import HotelMap from "../components/HotelMap";
+import { useHotelSearch } from "../hooks/useHotelSearch";
+import Filter from "../components/FilterPro.jsx";
+import { SlidersHorizontal, List, Map, X } from "lucide-react";
 
-  export default function HomePage() {
-    const [allHotels, setAllHotels] = useState([]);
-    const [displayedHotels, setDisplayedHotels] = useState([]);
-    const [showMap, setShowMap] = useState(false);
-    const [selectedHotelId, setSelectedHotelId] = useState(null);
-    const [currentFilters, setCurrentFilters] = useState({});
-    const { hotels, loading, error, searchHotels, getAllHotels } = useHotelSearch();
+export default function HomePage() {
+  const [allHotels, setAllHotels] = useState([]);
+  const [displayedHotels, setDisplayedHotels] = useState([]);
+  const [showMap, setShowMap] = useState(false);
+  const [selectedHotelId, setSelectedHotelId] = useState(null);
+  const [currentFilters, setCurrentFilters] = useState({});
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const { hotels, loading, error, searchHotels, getAllHotels } = useHotelSearch();
 
-    // Charger tous les hôtels au démarrage
-    useEffect(() => {
-      loadAllHotels();
-    }, []);
+  useEffect(() => {
+    loadAllHotels();
+  }, []);
 
-    const loadAllHotels = async () => {
-      try {
-        await getAllHotels();
-      } catch (error) {
-        console.error("Erreur lors du chargement des hôtels:", error);
-        // Fallback sur l'ancienne méthode si le hook échoue
-        fetch(`${import.meta.env.VITE_API_URL}/api/hotels`)
-          .then((response) => response.json())
+  const loadAllHotels = async () => {
+    try {
+      await getAllHotels();
+    } catch (error) {
+      console.error("Erreur lors du chargement des hôtels:", error);
+      fetch(`${import.meta.env.VITE_API_URL}/api/hotels`)
+          .then((res) => res.json())
           .then((data) => {
             setAllHotels(data);
             setDisplayedHotels(data);
           })
-          .catch((error) => console.error("Erreur:", error));
-      }
-    };
+          .catch((err) => console.error("Erreur:", err));
+    }
+  };
 
-    // Mettre à jour les hôtels affichés après une recherche
-    useEffect(() => {
-      if (hotels && hotels.length > 0) {
-        setAllHotels(hotels);
-        applyFilters(hotels, currentFilters);
-      }
-    }, [hotels]);
+  useEffect(() => {
+    if (hotels && hotels.length > 0) {
+      setAllHotels(hotels);
+      applyFilters(hotels, currentFilters);
+    }
+  }, [hotels]);
 
-    // Fonction de recherche depuis la barre de recherche
-    const handleSearch = async (searchParams) => {
-      try {
-        await searchHotels(searchParams);
-      } catch (error) {
-        console.error("Erreur lors de la recherche:", error);
-      }
-    };
+  const handleSearch = async (searchParams) => {
+    try {
+      await searchHotels(searchParams);
+    } catch (error) {
+      console.error("Erreur lors de la recherche:", error);
+    }
+  };
 
-    // Fonction pour appliquer les filtres
-    const applyFilters = (hotelsToFilter, filters) => {
-      let result = [...(hotelsToFilter || allHotels)];
+  const applyFilters = (hotelsToFilter, filters) => {
+    let result = [...(hotelsToFilter || allHotels)];
 
-      // Pas de filtre actif → tout afficher
-      if (!filters || Object.keys(filters).length === 0) {
-        setDisplayedHotels(result);
-        return;
-      }
-
-      result = result.filter((hotel) => {
-        // ── Prix ──
-        if (filters.prixMax && hotel.prixMoyenNuit > filters.prixMax) return false;
-        if (filters.prixMin && hotel.prixMoyenNuit < filters.prixMin) return false;
-
-        // ── Catégorie (tableau de nombres) ── clé alignée avec Filter
-        if (filters.categorie && filters.categorie.length > 0) {
-          if (!filters.categorie.includes(hotel.categorie)) return false;
-        }
-
-        // ── Note ──
-        if (filters.notationMin && hotel.noteMoyenne < filters.notationMin) return false;
-
-        // ── Équipements ── clé alignée + comparaison insensible à la casse
-        if (filters.equipements && filters.equipements.length > 0) {
-          const hotelEquip = (hotel.equipements || []).map((e) => e.toLowerCase());
-          const tousPresents = filters.equipements.every((eq) =>
-              hotelEquip.includes(eq.toLowerCase())
-          );
-          if (!tousPresents) return false;
-        }
-
-        // ── Ville ──
-        if (filters.ville && filters.ville.trim() !== "") {
-          if (!hotel.ville?.toLowerCase().includes(filters.ville.toLowerCase())) return false;
-        }
-
-        return true;
-      });
-
-      // ── Tri ──
-      if (filters.tri) {
-        result.sort((a, b) => {
-          switch (filters.tri) {
-            case "prix_asc":  return (a.prixMoyenNuit || 0) - (b.prixMoyenNuit || 0);
-            case "prix_desc": return (b.prixMoyenNuit || 0) - (a.prixMoyenNuit || 0);
-            case "note_desc": return (b.noteMoyenne || 0) - (a.noteMoyenne || 0);
-            case "nom_asc":   return (a.nom || "").localeCompare(b.nom || "");
-            default:          return 0;
-          }
-        });
-      }
-
+    if (!filters || Object.keys(filters).length === 0) {
       setDisplayedHotels(result);
-    };
+      return;
+    }
 
-// handleFilterChange — inchangé mais appelle la nouvelle version
-    const handleFilterChange = (filters) => {
-      setCurrentFilters(filters);
-      applyFilters(allHotels, filters);
-    };
-
-    // Réinitialisation des filtres
-    const handleResetFilters = () => {
-      setCurrentFilters({});
-      setDisplayedHotels(allHotels);
-    };
-
-    // Clic sur un hôtel depuis la carte
-    const handleHotelClick = (hotel) => {
-      setSelectedHotelId(hotel.id);
-
-      // Si on est en vue liste, scroll vers la card
-      if (!showMap) {
-        const element = document.getElementById(`hotel-${hotel.id}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+    result = result.filter((hotel) => {
+      if (filters.prixMax && hotel.prixMoyenNuit > filters.prixMax) return false;
+      if (filters.prixMin && hotel.prixMoyenNuit < filters.prixMin) return false;
+      if (filters.categorie?.length > 0 && !filters.categorie.includes(hotel.categorie)) return false;
+      if (filters.notationMin && hotel.noteMoyenne < filters.notationMin) return false;
+      if (filters.equipements?.length > 0) {
+        const hotelEquip = (hotel.equipements || []).map((e) => e.toLowerCase());
+        if (!filters.equipements.every((eq) => hotelEquip.includes(eq.toLowerCase()))) return false;
       }
-    };
+      if (filters.ville?.trim()) {
+        if (!hotel.ville?.toLowerCase().includes(filters.ville.toLowerCase())) return false;
+      }
+      return true;
+    });
 
-    // Basculer entre carte et liste
-    const toggleView = (isMapView) => {
-      setShowMap(isMapView);
-      setSelectedHotelId(null); // Réinitialiser la sélection
-    };
+    if (filters.tri) {
+      result.sort((a, b) => {
+        switch (filters.tri) {
+          case "prix_asc":  return (a.prixMoyenNuit || 0) - (b.prixMoyenNuit || 0);
+          case "prix_desc": return (b.prixMoyenNuit || 0) - (a.prixMoyenNuit || 0);
+          case "note_desc": return (b.noteMoyenne || 0) - (a.noteMoyenne || 0);
+          case "nom_asc":   return (a.nom || "").localeCompare(b.nom || "");
+          default:          return 0;
+        }
+      });
+    }
 
-    return (
-      <div className="min-h-screen bg-gray-50">
-        {/* Barre de recherche */}
+    setDisplayedHotels(result);
+  };
+
+  const handleFilterChange = (filters) => {
+    setCurrentFilters(filters);
+    applyFilters(allHotels, filters);
+    setMobileFilterOpen(false);
+  };
+
+  const handleResetFilters = () => {
+    setCurrentFilters({});
+    setDisplayedHotels(allHotels);
+  };
+
+  const handleHotelClick = (hotel) => {
+    setSelectedHotelId(hotel.id);
+    if (!showMap) {
+      const el = document.getElementById(`hotel-${hotel.id}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  const toggleView = (isMapView) => {
+    setShowMap(isMapView);
+    setSelectedHotelId(null);
+  };
+
+  return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+
+        {/* Hero + barre de recherche */}
         <BarRecherche onSearch={handleSearch} />
 
-        <div className="w-[90%] mx-auto mt-10">
-          {/* Boutons pour basculer entre liste et carte */}
-          <div className="flex justify-between items-center mb-6">
+        {/* Contenu principal */}
+        <div className="w-full max-w-[1400px] mx-auto px-4 md:px-8 mt-8 pb-16">
+
+          {/* Barre de contrôles */}
+          <div className="flex items-center justify-between mb-6 gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">
-                🏨 Nos hôtels
-              </h1>
-              <p className="text-gray-600 mt-1">
-                {displayedHotels.length} hôtel(s) disponible(s)
+              <h2 className="text-lg font-semibold text-gray-800 tracking-wide">
+                Nos établissements
+              </h2>
+              <p className="text-gray-400 text-xs mt-0.5">
+                {displayedHotels.length} hôtel{displayedHotels.length !== 1 ? "s" : ""} disponible{displayedHotels.length !== 1 ? "s" : ""}
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex items-center gap-2">
+              {/* Bouton filtre mobile */}
               <button
-                onClick={() => toggleView(false)}
-                className={`px-6 py-2 rounded-lg font-semibold transition-all ${
-                  !showMap
-                    ? "bg-blue-600 text-white shadow-lg"
-                    : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400"
-                }`}
+                  onClick={() => setMobileFilterOpen(true)}
+                  className="md:hidden flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-xs font-semibold px-3 py-2 rounded-xl hover:border-[#0EA5E9] hover:text-[#0EA5E9] transition-colors shadow-sm"
               >
-                📋 Liste
+                <SlidersHorizontal size={14} className="text-[#0EA5E9]" />
+                Filtres
               </button>
-              <button
-                onClick={() => toggleView(true)}
-                className={`px-6 py-2 rounded-lg font-semibold transition-all ${
-                  showMap
-                    ? "bg-blue-600 text-white shadow-lg"
-                    : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400"
-                }`}
-              >
-                🗺️ Carte
-              </button>
+
+              {/* Toggle liste / carte */}
+              <div className="flex bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                <button
+                    onClick={() => toggleView(false)}
+                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+                        !showMap
+                            ? "bg-[#0EA5E9] text-white"
+                            : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                    }`}
+                >
+                  <List size={14} />
+                  <span className="hidden sm:inline">Liste</span>
+                </button>
+                <button
+                    onClick={() => toggleView(true)}
+                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold transition-all duration-200 ${
+                        showMap
+                            ? "bg-[#0EA5E9] text-white"
+                            : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                    }`}
+                >
+                  <Map size={14} />
+                  <span className="hidden sm:inline">Carte</span>
+                </button>
+              </div>
             </div>
           </div>
 
+          {/* Layout sidebar + contenu */}
           <div className="flex gap-6">
-            {/* Filtres latéraux */}
-            <div className="w-80 flex-shrink-0">
+
+            {/* Sidebar filtres — desktop */}
+            <div className="hidden md:block w-72 flex-shrink-0">
               <Filter
-                onFilterChange={handleFilterChange}
-                onReset={handleResetFilters}
+                  onFilterChange={handleFilterChange}
+                  onReset={handleResetFilters}
               />
             </div>
 
-            {/* Contenu principal */}
-            <div className="flex-1">
-              {/* État de chargement */}
-              {loading && (
-                <div className="flex justify-center items-center h-96">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600 font-semibold">
-                      Chargement des hôtels...
-                    </p>
+            {/* Drawer filtres — mobile */}
+            {mobileFilterOpen && (
+                <div className="fixed inset-0 z-50 md:hidden">
+                  <div
+                      className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                      onClick={() => setMobileFilterOpen(false)}
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 rounded-t-2xl max-h-[85vh] overflow-y-auto">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                  <span className="text-xs font-semibold text-[#0EA5E9] uppercase tracking-widest">
+                    Filtres
+                  </span>
+                      <button
+                          onClick={() => setMobileFilterOpen(false)}
+                          className="text-gray-400 hover:text-gray-700 transition-colors"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <Filter
+                          onFilterChange={handleFilterChange}
+                          onReset={handleResetFilters}
+                      />
+                    </div>
                   </div>
                 </div>
+            )}
+
+            {/* Contenu principal */}
+            <div className="flex-1 min-w-0">
+
+              {/* Chargement */}
+              {loading && (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="text-center">
+                      <div className="w-10 h-10 border-2 border-[#BAE6FD] border-t-[#0EA5E9] rounded-full animate-spin mx-auto mb-4" />
+                      <p className="text-gray-400 text-sm">Chargement...</p>
+                    </div>
+                  </div>
               )}
 
               {/* Erreur */}
               {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow">
-                  <div className="flex items-center">
-                    <span className="text-2xl mr-3">⚠️</span>
-                    <div>
-                      <p className="font-bold">Erreur</p>
-                      <p>{error}</p>
-                    </div>
+                  <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl text-sm">
+                    <p className="font-semibold mb-1">Erreur</p>
+                    <p className="text-red-400">{error}</p>
                   </div>
-                </div>
               )}
 
               {/* Aucun résultat */}
               {!loading && !error && displayedHotels.length === 0 && (
-                <div className="text-center py-20 bg-white rounded-xl shadow-lg">
-                  <div className="text-6xl mb-4">😔</div>
-                  <h2 className="text-2xl font-bold text-gray-700 mb-2">
-                    Aucun hôtel trouvé
-                  </h2>
-                  <p className="text-gray-500 mb-6">
-                    Aucun hôtel ne correspond à vos critères de recherche
-                  </p>
-                  <button
-                    onClick={handleResetFilters}
-                    className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition font-semibold shadow-lg"
-                  >
-                    🔄 Réinitialiser les filtres
-                  </button>
-                </div>
+                  <div className="text-center py-20 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                    <p className="text-gray-200 text-5xl mb-4">—</p>
+                    <h2 className="text-lg font-semibold text-gray-700 mb-2">
+                      Aucun établissement trouvé
+                    </h2>
+                    <p className="text-gray-400 text-sm mb-6">
+                      Aucun hôtel ne correspond à vos critères
+                    </p>
+                    <button
+                        onClick={handleResetFilters}
+                        className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white text-sm font-semibold px-6 py-2.5 rounded-xl transition-colors"
+                    >
+                      Réinitialiser les filtres
+                    </button>
+                  </div>
               )}
 
               {/* Résultats */}
               {!loading && !error && displayedHotels.length > 0 && (
-                <>
-                  {!showMap ? (
-                    // Vue en grille (liste)
-                    <div>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {displayedHotels.map((hotel) => (
-                          <div
-                            key={hotel.id}
-                            id={`hotel-${hotel.id}`}
-                            className={`transition-all duration-300 ${
-                              selectedHotelId === hotel.id
-                                ? "ring-4 ring-blue-500 rounded-xl scale-105"
-                                : ""
-                            }`}
-                            onClick={() => setSelectedHotelId(hotel.id)}
-                          >
-                            <CardHotel hotel={hotel} />
+                  <>
+                    {!showMap ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
+                          {displayedHotels.map((hotel) => (
+                              <div
+                                  key={hotel.id}
+                                  id={`hotel-${hotel.id}`}
+                                  className="flex"
+                                  onClick={() => setSelectedHotelId(hotel.id)}
+                              >
+                                <CardHotel
+                                    hotel={hotel}
+                                    isSelected={selectedHotelId === hotel.id}
+                                />
+                              </div>
+                          ))}
+                        </div>
+                    ) : (
+                        <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+                          <div className="h-[600px] rounded-xl overflow-hidden">
+                            <HotelMap
+                                hotels={displayedHotels}
+                                onHotelClick={handleHotelClick}
+                                selectedHotelId={selectedHotelId}
+                            />
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    // Vue carte interactive
-                    <div className="bg-white rounded-xl shadow-lg p-4">
-                      <div className="h-[700px] rounded-lg overflow-hidden">
-                        <HotelMap
-                          hotels={displayedHotels}
-                          onHotelClick={handleHotelClick}
-                          selectedHotelId={selectedHotelId}
-                        />
-                      </div>
-
-                      {/* Légende de la carte */}
-                      <div className="mt-4 flex items-center justify-center gap-6 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-                          <span>Hôtel disponible</span>
+                          <div className="mt-4 flex items-center justify-center gap-6 text-xs text-gray-400">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 bg-[#0EA5E9] rounded-full" />
+                              <span>Hôtel disponible</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2.5 h-2.5 bg-[#F59E0B] rounded-full" />
+                              <span>Hôtel sélectionné</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
-                          <span>Hôtel sélectionné</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
+                    )}
+                  </>
               )}
             </div>
           </div>
         </div>
       </div>
-    );
-  }
+  );
+}

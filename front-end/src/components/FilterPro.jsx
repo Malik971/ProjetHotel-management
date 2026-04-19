@@ -1,5 +1,7 @@
+// src/components/FilterPro.jsx
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import EtoilesHotel from "./EtoilesHotel";
 
 const EQUIPEMENTS_OPTIONS = [
     { value: "Wifi", label: "WiFi" },
@@ -21,8 +23,8 @@ const TRI_OPTIONS = [
 
 const INITIAL = {
     prixMax: 500,
-    categorie: [],       // ← clé unifiée
-    equipements: [],     // ← clé unifiée (français, comme la BDD)
+    categorie: [],
+    equipements: [],
     notationMin: 0,
     tri: "",
 };
@@ -48,21 +50,25 @@ export default function Filter({ onFilterChange, onReset }) {
     };
 
     return (
-        <aside className="w-72 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6 sticky top-6 self-start">
-            <h2 className="text-base font-semibold text-gray-900 border-b border-gray-100 pb-4">
-                Filtres
-            </h2>
+        <aside className="w-72 bg-white border border-gray-100 rounded-2xl p-6 space-y-6 sticky top-6 self-start shadow-sm">
 
-            {/* ── TRI ── */}
+            {/* Header */}
+            <div className="border-b border-gray-100 pb-4">
+                <h2 className="text-xs font-semibold text-[#0EA5E9] uppercase tracking-[0.2em]">
+                    Filtres
+                </h2>
+            </div>
+
+            {/* Tri */}
             <section className="space-y-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                     Trier par
                 </p>
                 <div className="relative">
                     <select
                         value={filters.tri}
                         onChange={(e) => update({ tri: e.target.value })}
-                        className="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-3 py-2.5 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        className="w-full appearance-none bg-[#F0F9FF] border border-[#BAE6FD] text-gray-700 text-sm rounded-xl px-3 py-2.5 pr-8 focus:outline-none focus:border-[#0EA5E9] transition-colors cursor-pointer"
                     >
                         {TRI_OPTIONS.map((o) => (
                             <option key={o.value} value={o.value}>
@@ -72,18 +78,18 @@ export default function Filter({ onFilterChange, onReset }) {
                     </select>
                     <ChevronDown
                         size={14}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0EA5E9] pointer-events-none"
                     />
                 </div>
             </section>
 
-            {/* ── PRIX ── */}
+            {/* Prix */}
             <section className="space-y-3">
                 <div className="flex justify-between items-center">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                         Prix par nuit
                     </p>
-                    <span className="text-sm font-bold text-blue-600">
+                    <span className="text-sm font-bold text-[#0369A1]">
             {filters.prixMax} €
           </span>
                 </div>
@@ -94,43 +100,43 @@ export default function Filter({ onFilterChange, onReset }) {
                     step="5"
                     value={filters.prixMax}
                     onChange={(e) => update({ prixMax: Number(e.target.value) })}
-                    className="w-full accent-blue-600"
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                    style={{
+                        background: `linear-gradient(to right, #0EA5E9 ${((filters.prixMax - 20) / 480) * 100}%, #E0F2FE ${((filters.prixMax - 20) / 480) * 100}%)`,
+                        accentColor: "#0EA5E9",
+                    }}
                 />
-                <div className="flex justify-between text-xs text-gray-400">
+                <div className="flex justify-between text-xs text-gray-300">
                     <span>20 €</span>
                     <span>500 €</span>
                 </div>
             </section>
 
-            {/* ── CATÉGORIE (étoiles) ── */}
-            <section className="space-y-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Catégorie
+            {/* Classement */}
+            <section className="space-y-3">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+                    Classement
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                     {[5, 4, 3, 2].map((stars) => (
-                        <label
-                            key={stars}
-                            className="flex items-center gap-3 cursor-pointer group"
-                        >
-                            <input
-                                type="checkbox"
-                                checked={filters.categorie.includes(stars)}
-                                onChange={() => toggle("categorie", stars)}
-                                className="accent-blue-600 w-4 h-4 rounded"
-                            />
-                            <div className="flex items-center gap-1">
-                                {Array.from({ length: 5 }, (_, i) => (
-                                    <span
-                                        key={i}
-                                        className={`text-base leading-none ${
-                                            i < stars ? "text-amber-400" : "text-gray-200"
-                                        }`}
-                                    >
-                    ★
-                  </span>
-                                ))}
-                                <span className="text-xs text-gray-500 ml-1">
+                        <label key={stars} className="flex items-center gap-3 cursor-pointer group">
+                            <div
+                                onClick={() => toggle("categorie", stars)}
+                                className={`w-4 h-4 rounded flex items-center justify-center border transition-all duration-150 flex-shrink-0 ${
+                                    filters.categorie.includes(stars)
+                                        ? "bg-[#0EA5E9] border-[#0EA5E9]"
+                                        : "bg-white border-gray-200 group-hover:border-[#0EA5E9]/50"
+                                }`}
+                            >
+                                {filters.categorie.includes(stars) && (
+                                    <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                        <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <EtoilesHotel categorie={stars} size="xs" />
+                                <span className="text-xs text-gray-500 group-hover:text-gray-800 transition-colors">
                   {stars === 5 ? "Luxe" : stars === 4 ? "Premium" : stars === 3 ? "Confort" : "Économique"}
                 </span>
                             </div>
@@ -139,40 +145,47 @@ export default function Filter({ onFilterChange, onReset }) {
                 </div>
             </section>
 
-            {/* ── ÉQUIPEMENTS ── */}
-            <section className="space-y-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            {/* Équipements */}
+            <section className="space-y-3">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
                     Équipements
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                     {EQUIPEMENTS_OPTIONS.map((eq) => (
-                        <label
-                            key={eq.value}
-                            className="flex items-center gap-3 cursor-pointer text-sm text-gray-700"
-                        >
-                            <input
-                                type="checkbox"
-                                checked={filters.equipements.includes(eq.value)}
-                                onChange={() => toggle("equipements", eq.value)}
-                                className="accent-blue-600 w-4 h-4 rounded"
-                            />
-                            {eq.label}
+                        <label key={eq.value} className="flex items-center gap-3 cursor-pointer group">
+                            <div
+                                onClick={() => toggle("equipements", eq.value)}
+                                className={`w-4 h-4 rounded flex items-center justify-center border transition-all duration-150 flex-shrink-0 ${
+                                    filters.equipements.includes(eq.value)
+                                        ? "bg-[#0EA5E9] border-[#0EA5E9]"
+                                        : "bg-white border-gray-200 group-hover:border-[#0EA5E9]/50"
+                                }`}
+                            >
+                                {filters.equipements.includes(eq.value) && (
+                                    <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                                        <path d="M1 3.5L3.5 6L8 1" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                )}
+                            </div>
+                            <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
+                {eq.label}
+              </span>
                         </label>
                     ))}
                 </div>
             </section>
 
-            {/* ── ACTIONS ── */}
+            {/* Actions */}
             <div className="pt-4 border-t border-gray-100 space-y-2">
                 <button
                     onClick={apply}
-                    className="w-full bg-gray-900 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
+                    className="w-full bg-[#0EA5E9] hover:bg-[#0284C7] text-white py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200"
                 >
                     Appliquer
                 </button>
                 <button
                     onClick={reset}
-                    className="w-full py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 transition-colors"
+                    className="w-full py-2.5 rounded-xl text-sm text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200"
                 >
                     Réinitialiser
                 </button>
