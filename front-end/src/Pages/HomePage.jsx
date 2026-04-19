@@ -174,7 +174,8 @@ export default function HomePage() {
           <div className="flex gap-6">
 
             {/* Sidebar filtres — desktop */}
-            <div className="hidden md:block w-72 flex-shrink-0">
+            <div className="w-72 flex-shrink-0" style={{ display: 'none' }}
+                 ref={el => { if (el && window.innerWidth >= 768) el.style.display = 'block'; }}>
               <Filter
                   onFilterChange={handleFilterChange}
                   onReset={handleResetFilters}
