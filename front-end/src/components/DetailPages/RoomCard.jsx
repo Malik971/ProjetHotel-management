@@ -1,145 +1,122 @@
-import React, { useState } from 'react';
+// src/components/DetailPages/RoomCard.jsx
+import React from "react";
+import { Users, Maximize2, Bed, CheckCircle } from "lucide-react";
+
+// Fallback images pour chambres sans photo
+const FALLBACK_ROOM_IMAGES = [
+  "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
+  "https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=800&q=80",
+  "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80",
+];
 
 export default function RoomCard({ chambre, onReserver }) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  if (!chambre) return null;
 
-  // ✅ PROTECTION : Vérifier que chambre existe
-  if (!chambre) {
-    console.error('❌ RoomCard: chambre est undefined');
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 text-center text-gray-500">
-        Chambre non disponible
-      </div>
-    );
-  }
+  // Résolution image : priorité à imageUrls[0], sinon imageUrl, sinon fallback aléatoire
+  const fallback = FALLBACK_ROOM_IMAGES[(chambre.id || 0) % FALLBACK_ROOM_IMAGES.length];
+  const rawImage = chambre.imageUrls?.[0] || chambre.imageUrl || fallback;
+  const imageSrc = rawImage.startsWith("http")
+      ? rawImage
+      : `${import.meta.env.VITE_API_URL}${rawImage}`;
 
-  console.log('🛏️ RoomCard - chambre reçue:', chambre);
+  const equipements = chambre.equipment || chambre.amenities || [];
 
-  const nextImage = () => {
-    if (chambre.imageUrls && chambre.imageUrls.length > 0) {
-      setCurrentImageIndex((prev) =>
-        prev === chambre.imageUrls.length - 1 ? 0 : prev + 1
-      );
-    }
-  };
-
-  const prevImage = () => {
-    if (chambre.imageUrls && chambre.imageUrls.length > 0) {
-      setCurrentImageIndex((prev) =>
-        prev === 0 ? chambre.imageUrls.length - 1 : prev - 1
-      );
-    }
-  };
+  // Disponibilité fictive (à brancher sur vraie data quand dispo)
+  const available = chambre.disponibles ?? null;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
-      {/* Image Slider */}
-      <div className="relative h-64 bg-gray-200">
-        {chambre.imageUrls && chambre.imageUrls.length > 0 ? (
-          <>
-            <img
-              src={chambre.imageUrls[currentImageIndex]}
-              alt={chambre.nom || 'Chambre'}
+      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-[#0EA5E9]/40 hover:shadow-md hover:shadow-[#0EA5E9]/10 transition-all duration-300 flex flex-col md:flex-row">
+
+        {/* Image gauche */}
+        <div className="relative flex-shrink-0 w-full md:w-60 h-48 md:h-auto">
+          <img
+              src={imageSrc}
+              alt={chambre.nom || "Chambre"}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/400x300?text=Image+non+disponible';
+                e.target.onerror = null;
+                e.target.src = fallback;
               }}
-            />
+          />
 
-            {/* Navigation slider */}
-            {chambre.imageUrls.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 hover:bg-white"
-                >
-                  ←
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 hover:bg-white"
-                >
-                  →
-                </button>
-
-                {/* Dots indicateurs */}
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                  {chambre.imageUrls.map((_, idx) => (
-                    <div
-                      key={idx}
-                      className={`w-2 h-2 rounded-full ${
-                        idx === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                      }`}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            Aucune image
-          </div>
-        )}
-      </div>
-
-      {/* Informations */}
-      <div className="p-4">
-        <h3 className="text-xl font-semibold mb-2">{chambre.nom || 'Chambre sans nom'}</h3>
-
-        <div className="space-y-2 text-sm text-gray-600 mb-4">
-          <p>
-            💶 <span className="font-semibold text-lg text-gray-900">
-              {chambre.prixParNuit || 0}€
-            </span> / nuit
-          </p>
-
-          <p>👥 {chambre.capacity || 0} personne{chambre.capacity > 1 ? 's' : ''}</p>
-          <p>📐 {chambre.superficie || 0} m²</p>
-          <p>🛏️ {chambre.typeLit || 'Non spécifié'}</p>
+          {/* Badge disponibilité */}
+          {available !== null && available <= 2 && (
+              <span className="absolute top-3 left-3 bg-[#F59E0B] text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow">
+            Plus que {available} disponible{available > 1 ? "s" : ""}
+          </span>
+          )}
         </div>
 
-        {/* Description */}
-        {chambre.description && (
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 line-clamp-2">{chambre.description}</p>
-          </div>
-        )}
+        {/* Contenu centre */}
+        <div className="flex-1 p-4 md:p-5 flex flex-col md:flex-row gap-4 md:gap-6">
 
-        {/* Équipements */}
-        {chambre.equipments && chambre.equipments.length > 0 ? (
-          <div className="mb-4">
-            <p className="text-sm font-medium text-gray-700 mb-1">Équipements :</p>
-            <div className="flex flex-wrap gap-2">
-              {chambre.equipments.slice(0, 3).map((eq, idx) => (
-                <span
-                  key={idx}
-                  className="text-xs bg-gray-100 px-2 py-1 rounded"
-                >
-                  {eq}
-                </span>
-              ))}
-              {chambre.equipments.length > 3 && (
-                <span className="text-xs text-gray-500">
-                  +{chambre.equipments.length - 3} autres
-                </span>
+          {/* Infos */}
+          <div className="flex-1 space-y-3 min-w-0">
+            <div>
+              <h3 className="font-bold text-gray-900 text-base mb-1">
+                {chambre.nom || chambre.name || "Chambre"}
+              </h3>
+              {chambre.description && (
+                  <p className="text-gray-500 text-xs line-clamp-2 leading-relaxed">
+                    {chambre.description}
+                  </p>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="mb-4">
-            <p className="text-xs text-gray-400 italic">Aucun équipement listé</p>
-          </div>
-        )}
 
-        {/* Bouton réserver */}
-        <button
-          onClick={() => onReserver(chambre)}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-        >
-          Réserver
-        </button>
+            {/* Caractéristiques */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+              {(chambre.capacity || chambre.capacite) && (
+                  <div className="flex items-center gap-1">
+                    <Users size={13} className="text-[#0EA5E9]" />
+                    <span>{chambre.capacity || chambre.capacite} personnes</span>
+                  </div>
+              )}
+              {(chambre.superficie || chambre.size) && (
+                  <div className="flex items-center gap-1">
+                    <Maximize2 size={13} className="text-[#0EA5E9]" />
+                    <span>{chambre.superficie || chambre.size} m²</span>
+                  </div>
+              )}
+              {(chambre.typeLit || chambre.bedType) && (
+                  <div className="flex items-center gap-1">
+                    <Bed size={13} className="text-[#0EA5E9]" />
+                    <span>{chambre.typeLit || chambre.bedType}</span>
+                  </div>
+              )}
+            </div>
+
+            {/* Équipements */}
+            {equipements.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                  {equipements.slice(0, 4).map((eq) => (
+                      <div key={eq} className="flex items-center gap-2 text-xs text-gray-600">
+                        <CheckCircle size={13} className="text-[#0EA5E9] flex-shrink-0" fill="#E0F2FE" />
+                        <span className="line-clamp-1">{eq}</span>
+                      </div>
+                  ))}
+                </div>
+            )}
+          </div>
+
+          {/* Prix + CTA à droite (desktop) / en bas (mobile) */}
+          <div className="md:w-44 md:border-l md:border-gray-100 md:pl-5 flex md:flex-col items-end md:items-stretch justify-between md:justify-end gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100">
+            <div className="md:text-right">
+              <p className="text-[#0369A1] font-bold text-xl leading-none">
+                {chambre.prixParNuit || chambre.pricePerNight}
+                <span className="text-sm">€</span>
+                <span className="text-gray-400 text-xs font-normal"> / nuit</span>
+              </p>
+              <p className="text-[10px] text-gray-400 mt-1">Taxes et frais inclus</p>
+            </div>
+
+            <button
+                onClick={() => onReserver?.(chambre)}
+                className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+            >
+              Réserver
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
   );
 }

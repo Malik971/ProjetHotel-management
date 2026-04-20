@@ -1,3 +1,4 @@
+// src/App.jsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import MainLayout from "./layout/MainLayout";
@@ -23,17 +24,15 @@ function App() {
         <BrowserRouter>
             <Routes>
 
-                {/* Pages AVEC layout */}
+                {/* Pages AVEC layout (navbar) */}
                 <Route element={<MainLayout />}>
                     <Route path="/" element={<HomePage />} />
-                     {/* Page détails d'un hôtel avec ses chambres */}
-                           <Route path="/hotel/:hotelId" element={<DetailsPage />} />
-
-                            {/* Page de gestion des chambres (Admin) */}
-                            <Route path="/chambres" element={<ChambreManagementPage />} />
-
-
+                    {/* Page de gestion des chambres (Admin) */}
+                    <Route path="/chambres" element={<ChambreManagementPage />} />
                 </Route>
+
+                {/* Pages SANS layout — navbar retirée */}
+                <Route path="/hotel/:hotelId" element={<DetailsPage />} />
 
                 {/* Auth */}
                 <Route path="/Connexion" element={<ConnexionUser />} />
@@ -50,9 +49,9 @@ function App() {
                 />
 
                 <Route path="/mes-reservations" element={
-                  <ProtectedRoute>
-                    <MesReservationsPage />
-                  </ProtectedRoute>
+                    <ProtectedRoute>
+                        <MesReservationsPage />
+                    </ProtectedRoute>
                 } />
 
                 <Route

@@ -1,115 +1,65 @@
-import React, { useState, useEffect } from 'react';
-import { useChambres } from '../../hooks/useChambres';
-import RoomCard from './RoomCard';
-import ReservationModal from './ReservationModal';
+// src/components/DetailPages/HotelRooms.jsx
+import React, { useState } from "react";
+import { useChambres } from "../../hooks/useChambres";
+import RoomCard from "./RoomCard";
+import ReservationModal from "./ReservationModal";
 
 export default function HotelRooms({ hotelId }) {
-  const { chambres, loading, error } = useChambres(hotelId);
-  const [selectedChambre, setSelectedChambre] = useState(null);
-    const rooms = [
-        {
-            id: 1,
-            name: "Chambre Classique",
-            capacity: 2,
-            size: 25,
-            bedType: "Lit Queen",
-            amenities: ["Climatisation", "Minibar", "Télévision écran plat"],
-            pricePerNight: 245,
-            imageUrl: "https://picsum.photos/400/200",
-        },
-        {
-            id: 2,
-            name: "Suite Deluxe",
-            capacity: 4,
-            size: 45,
-            bedType: "2 Lits King",
-            amenities: ["Climatisation", "Minibar", "Télévision écran plat", "Jacuzzi"],
-            pricePerNight: 450,
-            imageUrl: "https://picsum.photos/400/201",
-        },
-        {
-            id: 3,
-            name: "Chambre Familiale",
-            capacity: 5,
-            size: 35,
-            bedType: "1 Lit King + 1 Canapé-lit",
-            amenities: ["Climatisation", "Minibar", "Télévision écran plat", "Kitchenette"],
-            pricePerNight: 320,
-            imageUrl: "https://picsum.photos/400/202",
-        },
-    ]
-  // ✅ DEBUG : Afficher ce qui est reçu
-  useEffect(() => {
-    console.log('🏨 HotelRooms - hotelId:', hotelId);
-    console.log('🛏️ HotelRooms - chambres:', chambres);
-    console.log('⏳ HotelRooms - loading:', loading);
-    console.log('❌ HotelRooms - error:', error);
-  }, [hotelId, chambres, loading, error]);
+    const { chambres, loading, error } = useChambres(hotelId);
+    const [selectedChambre, setSelectedChambre] = useState(null);
 
-  const handleReserver = (chambre) => {
-    console.log('📅 Réservation pour:', chambre);
-    setSelectedChambre(chambre);
-  };
+    const handleReserver = (chambre) => {
+        setSelectedChambre(chambre);
+    };
 
-  const handleCloseModal = () => {
-    setSelectedChambre(null);
-  };
+    const handleCloseModal = () => {
+        setSelectedChambre(null);
+    };
 
-  if (loading) {
+    if (loading) {
+        return (
+            <div className="text-center py-10">
+                <div className="w-10 h-10 border-2 border-[#BAE6FD] border-t-[#0EA5E9] rounded-full animate-spin mx-auto" />
+                <p className="mt-4 text-gray-500 text-sm">Chargement des chambres...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl text-sm">
+                <p className="font-semibold mb-1">Erreur</p>
+                <p className="text-red-400">{error}</p>
+            </div>
+        );
+    }
+
+    if (!chambres || chambres.length === 0) {
+        return (
+            <div className="text-center py-10 bg-white border border-gray-100 rounded-2xl">
+                <p className="text-gray-200 text-4xl mb-3">—</p>
+                <p className="text-gray-500 text-sm">Aucune chambre disponible pour cet hôtel.</p>
+            </div>
+        );
+    }
+
     return (
-      <div className="text-center py-10">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Chargement des chambres...</p>
-      </div>
+        <div className="flex flex-col gap-4">
+            {chambres.map((chambre, index) => (
+                <RoomCard
+                    key={chambre.id || index}
+                    chambre={chambre}
+                    onReserver={handleReserver}
+                />
+            ))}
+
+            {selectedChambre && (
+                <ReservationModal
+                    chambre={selectedChambre}
+                    onClose={handleCloseModal}
+                    onSuccess={() => {}}
+                />
+            )}
+        </div>
     );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 text-red-800 p-4 rounded-lg">
-        ❌ Erreur : {error}
-      </div>
-    );
-  }
-
-  if (!chambres || chambres.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-gray-500 mb-4">Aucune chambre disponible pour cet hôtel.</p>
-        <p className="text-sm text-gray-400">Hotel ID: {hotelId}</p>
-      </div>
-    );
-  }
-
-  return (
-    <section>
-      <h2 className="text-2xl font-bold mb-6">
-        Chambres disponibles ({chambres.length})
-      </h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {chambres.map((chambre, index) => {
-          console.log(`🛏️ Rendu chambre ${index}:`, chambre); // DEBUG
-          return (
-            <RoomCard
-              key={chambre.id || index}
-              chambre={chambre}
-              onReserver={handleReserver}
-            />
-          );
-        })}
-      </div>
-
-      {/* Modal de réservation */}
-      {selectedChambre && (
-        <ReservationModal
-          chambre={selectedChambre}
-          onClose={handleCloseModal}
-          onSuccess={() => {
-            console.log('✅ Réservation réussie');
-          }}
-        />
-      )}
-    </section>
-  );
 }
