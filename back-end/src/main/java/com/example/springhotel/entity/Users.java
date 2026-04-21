@@ -12,14 +12,18 @@ import java.util.List;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Users {
 
-    // Getters et setters
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String firstName;
     private String lastName;
+
+    @Column(unique = true, nullable = false)
     private String email;
+
+    private String telephone;
+
     private String password;
     private boolean enabled;
 
@@ -34,8 +38,5 @@ public class Users {
     // Méthode utilitaire pour ajouter un rôle
     public void addRole(Role role) {
         this.roles.add(role);
-    }
-
-    public void setRole(String roleAdmin) {
     }
 }

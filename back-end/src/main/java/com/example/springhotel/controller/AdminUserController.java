@@ -10,11 +10,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*") // Pour debug React
+@CrossOrigin(origins = "*")
 public class AdminUserController {
+
+    // Rôles autorisés pour la création côté admin (empêche un admin de créer
+    // autre chose que ce qu'on a prévu)
+    private static final Set<String> ALLOWED_ROLES = Set.of("USER", "EMPLOYE", "ADMIN");
 
     @Autowired
     private UserRepository userRepository;
@@ -25,37 +31,58 @@ public class AdminUserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Récupérer tous les utilisateurs
     @GetMapping("/users")
     public List<Users> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // Ajouter un utilisateur
     @PostMapping("/users")
     public ResponseEntity<?> createUser(@RequestBody Users users, @RequestParam String role) {
 
-        if (userRepository.findByEmail(users.getEmail()) != null) {
-            return ResponseEntity.badRequest().body("Email already exists");
+        // Validation email
+        if (users.getEmail() == null || users.getEmail().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email obligatoire"));
+        }
+        if (users.getPassword() == null || users.getPassword().length() < 6) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Mot de passe trop court (min 6 caractères)"));
+        }
+
+        // Fix bug critique : findByEmail retourne Optional, jamais null
+        if (userRepository.existsByEmail(users.getEmail())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email already exists"));
+        }
+
+        // Validation du rôle demandé
+        String roleUpper = role == null ? "" : role.toUpperCase();
+        if (!ALLOWED_ROLES.contains(roleUpper)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Rôle invalide. Attendu : USER, EMPLOYE ou ADMIN"));
+        }
+
+        Role roleEntity = roleRepository.findByName("ROLE_" + roleUpper);
+        if (roleEntity == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Role not found in database"));
         }
 
         users.setPassword(passwordEncoder.encode(users.getPassword()));
         users.setEnabled(true);
-
-        // Chercher le rôle en base
-        Role roleEntity = roleRepository.findByName("ROLE_" + role.toUpperCase());
-        if (roleEntity == null) {
-            return ResponseEntity.badRequest().body("Role not found");
-        }
         users.addRole(roleEntity);
 
-        Users savedUsers = userRepository.save(users);
-        return ResponseEntity.ok(savedUsers);
+        try {
+            Users savedUsers = userRepository.save(users);
+            return ResponseEntity.ok(savedUsers);
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", "Erreur lors de la création"));
+        }
     }
 
-    // Supprimer un utilisateur
     @DeleteMapping("/users/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.status(404).body(Map.of("error", "Utilisateur introuvable"));
+        }
         userRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }

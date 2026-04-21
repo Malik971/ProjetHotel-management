@@ -1,0 +1,24 @@
+# ============================================================
+# docker-compose.yml — PostgreSQL pour le développement
+# Emplacement : à la racine du projet (à côté du Dockerfile)
+# ============================================================
+# Lancer :     docker compose up -d
+# Arrêter :    docker compose down
+# Reset BDD :  docker compose down -v  (supprime le volume)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hotel_postgres
+    environment:
+      POSTGRES_DB: hotel_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - hotel_pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  hotel_pgdata:
