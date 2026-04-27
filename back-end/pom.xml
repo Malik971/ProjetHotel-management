@@ -23,7 +23,8 @@
 
 	<modules>
 		<module>sejour-backend</module>
-		<!-- Module pastell-mock ajoute au Lot 2 -->
+		<module>pastell-mock</module>
+
 	</modules>
 
 	<properties>
