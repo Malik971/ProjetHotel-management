@@ -18,6 +18,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.pastellmock.domain.DocumentTransitions;
+import com.example.pastellmock.domain.JournalEntry;
+import java.util.List;
+
 /**
  * Tests unitaires PURS du MockDocumentStore.
  *
@@ -42,8 +46,7 @@ class MockDocumentStoreTest {
 
     @BeforeEach
     void setUp() {
-        // Une instance neuve pour chaque test : isolation totale
-        store = new MockDocumentStore();
+        store = new MockDocumentStore(new DocumentTransitions());
     }
 
     // ============================================================
