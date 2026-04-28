@@ -248,7 +248,9 @@ class DocumentControllerTest {
                     .andExpect(jsonPath("$.data").isEmpty())
                     // action_possible contient "modification" apres une creation
                     .andExpect(jsonPath("$.action_possible").isArray())
-                    .andExpect(jsonPath("$.action_possible[0]").value("modification"));
+                    .andExpect(jsonPath("$.action_possible", org.hamcrest.Matchers.hasSize(2)))
+                    .andExpect(jsonPath("$.action_possible",
+                            org.hamcrest.Matchers.containsInAnyOrder("annulation", "validation")));
         }
     }
 }
