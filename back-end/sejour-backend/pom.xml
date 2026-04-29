@@ -55,6 +55,22 @@
             <artifactId>spring-aspects</artifactId>
         </dependency>
 
+        <!-- WireMock : utilise pour tester PastellClient sans depender du mock Pastell reel.
+     Permet de simuler les reponses HTTP (succes, 4xx, 5xx, timeouts) en isolation. -->
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- H2 : base en memoire pour les tests d'integration qui ouvrent un contexte Spring complet.
+     PostgreSQL reste la base de prod (et de dev local), H2 n'est utilisee qu'en scope test. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Migrations Flyway pour PostgreSQL -->
         <!-- NB : le projet utilise desormais PostgreSQL (migration MySQL -> PostgreSQL effectuee) -->
         <dependency>

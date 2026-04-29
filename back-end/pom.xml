@@ -36,6 +36,8 @@
 		<!-- Versions centralisees pour les dependances NON gerees par Spring Boot BOM -->
 		<spring-retry.version>2.0.10</spring-retry.version>
 		<springdoc.version>2.6.0</springdoc.version>
+
+		<wiremock.version>3.10.0</wiremock.version>
 	</properties>
 
 	<dependencyManagement>
@@ -54,6 +56,16 @@
 				<groupId>org.springdoc</groupId>
 				<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
 				<version>${springdoc.version}</version>
+			</dependency>
+
+			<!-- WireMock : serveur HTTP local pour tester les appels REST sortants.
+     			Version 3.x requise pour la compatibilite Jetty 12 / Spring Boot 4.0.
+     			Utilise au Lot 3 pour tester PastellClient en isolation,
+     			puis au Lot 4 pour valider le comportement de retry sur erreurs reseau. -->
+			<dependency>
+				<groupId>org.wiremock</groupId>
+				<artifactId>wiremock-standalone</artifactId>
+				<version>${wiremock.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

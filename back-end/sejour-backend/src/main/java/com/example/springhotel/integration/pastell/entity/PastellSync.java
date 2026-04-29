@@ -19,8 +19,16 @@ import java.time.LocalDateTime;
  *
  * Invariants :
  *   - reservationId est UNIQUE : une reservation = un seul dossier Pastell.
- *   - pastellDocumentId est UNIQUE : pas de partage entre reservations.
- *   - syncStatus n'est jamais null.
+ *   - pastellDocumentId est UNIQUE quand non null : pas de partage entre reservations.
+ *     Peut etre null tant que le premier appel create-document.php n'a pas reussi
+ *     (statut PENDING ou EN_RETRY avant premier succes).
+ *   - syncStatus n'est jamais null (garanti par @PrePersist).
+ *
+ * Note sur le ON DELETE CASCADE :
+ *   La cascade est definie cote SQL (V2__pastell_sync_table.sql), pas en JPA.
+ *   Si une reservation est supprimee en base, son PastellSync disparait aussi.
+ *   Ce choix evite de coupler l'entite JPA a Reservation tout en gardant
+ *   l'integrite referentielle en base.
  */
 @Entity
 @Table(name = "pastell_sync")
@@ -43,10 +51,18 @@ public class PastellSync {
 
     /**
      * id_d retourne par Pastell lors du create-document.php.
-     * Stocke des le premier succes pour garantir l'idempotence :
-     * on ne recree jamais un dossier deja cree.
+     *
+     * Nullable : un PastellSync en statut PENDING ou EN_RETRY (avant premier succes)
+     * n'a pas encore recu d'id_d. La colonne est remplie des le premier appel reussi
+     * a create-document.php et ne change plus ensuite.
+     *
+     * La contrainte UNIQUE en base accepte plusieurs NULL (norme SQL standard),
+     * ce qui permet d'avoir plusieurs syncs en PENDING sans conflit.
+     *
+     * L'idempotence est garantie par la contrainte UNIQUE sur reservation_id :
+     * on ne cree jamais deux PastellSync pour la meme reservation.
      */
-    @Column(name = "pastell_document_id", nullable = false, unique = true, length = 100)
+    @Column(name = "pastell_document_id", unique = true, length = 100)
     private String pastellDocumentId;
 
     /**
@@ -58,7 +74,7 @@ public class PastellSync {
 
     /**
      * Statut technique de la synchronisation.
-     * Voir {@link SyncStatus} pour la semantique de chaque valeur.
+     * Voir {@link SyncStatus} pour la semantique de chaque valeur et le cycle de vie.
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "sync_status", nullable = false, length = 20)
@@ -91,13 +107,21 @@ public class PastellSync {
     @Column(name = "date_modification", nullable = false)
     private LocalDateTime dateModification;
 
+    /**
+     * Callback JPA avant la premiere insertion en base.
+     *
+     * Initialise les horodatages et les valeurs par defaut.
+     * Le statut par defaut est PENDING (et non EN_RETRY) car a ce stade
+     * aucun appel HTTP n'a encore ete tente. PENDING signifie "intention
+     * de synchroniser enregistree, appel pas encore lance".
+     */
     @PrePersist
     public void prePersist() {
         LocalDateTime now = LocalDateTime.now();
         this.dateCreation = now;
         this.dateModification = now;
         if (this.syncStatus == null) {
-            this.syncStatus = SyncStatus.EN_RETRY;
+            this.syncStatus = SyncStatus.PENDING;
         }
         if (this.tentatives == null) {
             this.tentatives = 0;
