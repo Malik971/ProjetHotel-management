@@ -26,6 +26,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * DevRel note : tester les messages d'erreur est souvent neglige. Pour un
  * produit destine a etre integre par des tiers, la qualite des messages d'echec
  * vaut autant que celle de la documentation nominale.
+ *
+ * Profil "test" active manuellement :
+ *   Comme on lance SpringApplication directement (pas via @SpringBootTest),
+ *   on ne peut pas utiliser @ActiveProfiles. On force le profil "test" via
+ *   {@link SpringApplication#setAdditionalProfiles(String...)} pour que
+ *   application-test.properties soit charge (H2 en memoire, Flyway desactive).
  */
 class PastellPropertiesValidationTest {
 
@@ -87,10 +93,17 @@ class PastellPropertiesValidationTest {
      * la validation dans PastellConfig. On evite un @SpringBootTest complet
      * parce qu'on veut que l'application CRASHE au demarrage, pas qu'elle
      * reussisse a se lever.
+     *
+     * Active explicitement le profil "test" pour que application-test.properties
+     * soit charge en plus de application.properties. Sans ca, Spring tenterait
+     * de se connecter a PostgreSQL local (defini dans application.properties)
+     * et echouerait avec ConnectException avant meme d'arriver a la validation
+     * Pastell qu'on veut tester.
      */
     private void startWithProperties(String... args) {
         SpringApplication app = new SpringApplication(MinimalTestApp.class);
         app.setWebApplicationType(WebApplicationType.NONE);
+        app.setAdditionalProfiles("test");
         app.run(args).close();
     }
 

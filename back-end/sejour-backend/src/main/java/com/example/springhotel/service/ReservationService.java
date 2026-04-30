@@ -8,7 +8,9 @@ import com.example.springhotel.entity.Users;
 import com.example.springhotel.repository.ChambreRepository;
 import com.example.springhotel.repository.ReservationRepository;
 import com.example.springhotel.repository.UserRepository;
+import com.example.springhotel.reservation.event.ReservationCreatedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,15 @@ public class ReservationService {
     private final ChambreRepository chambreRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+
+    /**
+     * Publisher d'evenements Spring.
+     *
+     * Utilise pour notifier les autres composants (ex. integration Pastell)
+     * qu'une reservation vient d'etre creee, SANS coupler ReservationService
+     * a ces composants. Spring l'injecte automatiquement via Lombok @RequiredArgsConstructor.
+     */
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ReservationResponseDTO creerReservation(ReservationRequestDTO request, String userEmail) {
@@ -74,14 +85,25 @@ public class ReservationService {
         // 7. Sauvegarder
         Reservation saved = reservationRepository.save(reservation);
 
-        // 8. Envoyer l'email de confirmation
+        // 8. Publier l'evenement de creation.
+        //    Pas de try/catch : si la publication echoue, on veut que toute la
+        //    transaction soit rollback (sinon on aurait une reservation persistee
+        //    sans avoir notifie les autres composants).
+        //    Note : avec @TransactionalEventListener(AFTER_COMMIT) cote listener
+        //    (Paquet 4), Spring met l'evenement en attente jusqu'au commit reussi
+        //    de cette transaction. Si le commit echoue, le listener n'est jamais
+        //    invoque. C'est exactement le comportement voulu pour eviter de creer
+        //    un dossier Pastell pour une reservation qui n'a pas survecu.
+        eventPublisher.publishEvent(new ReservationCreatedEvent(saved.getId()));
+
+        // 9. Envoyer l'email de confirmation
         try {
             emailService.envoyerEmailConfirmation(saved);
         } catch (Exception e) {
             System.err.println("⚠️ Erreur envoi email (réservation créée quand même) : " + e.getMessage());
         }
 
-        // 9. Convertir en DTO et retourner
+        // 10. Convertir en DTO et retourner
         return convertToDTO(saved);
     }
 

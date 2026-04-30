@@ -127,6 +127,10 @@
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
 
         <!-- NETTOYAGE EFFECTUE :
              - Supprime org.testng (non utilise, version "RELEASE" deconseillee)

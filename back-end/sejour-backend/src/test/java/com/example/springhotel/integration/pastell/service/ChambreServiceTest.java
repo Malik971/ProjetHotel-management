@@ -1,4 +1,4 @@
-package com.example.springhotel.service;
+package com.example.springhotel.integration.pastell.service;
 
 public class ChambreServiceTest {
 

@@ -5,6 +5,7 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
 
@@ -22,8 +23,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *
  * Si ce test echoue, c'est que la condition @ConditionalOnProperty ne fonctionne pas,
  * et l'application risque de faire des appels reseau meme desactivee.
+ *
+ * Pourquoi @ActiveProfiles("test") ?
+ *   Active le profil "test" qui charge application-test.properties.
+ *   Resultat : H2 en memoire au lieu de PostgreSQL, Flyway desactive.
+ *   Permet de lancer ce test sans Docker / PostgreSQL local demarre.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @TestPropertySource(properties = {
         "pastell.enabled=false"
 })

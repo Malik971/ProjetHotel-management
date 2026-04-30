@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.web.client.RestClient;
 
@@ -20,8 +21,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * NB : on utilise une URL bidon (localhost:9999) parce qu'aucun appel HTTP
  * n'est effectue au Lot 1. Le premier appel reel aura lieu au Lot 3.
+ *
+ * Pourquoi @ActiveProfiles("test") ?
+ *   Active le profil "test" qui charge application-test.properties.
+ *   Resultat : H2 en memoire au lieu de PostgreSQL, Flyway desactive.
+ *   Permet de lancer ce test sans Docker / PostgreSQL local demarre.
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @TestPropertySource(properties = {
         "pastell.enabled=true",
         "pastell.mode=MOCK",
