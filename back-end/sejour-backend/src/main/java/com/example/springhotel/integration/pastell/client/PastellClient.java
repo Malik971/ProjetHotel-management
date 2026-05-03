@@ -17,30 +17,32 @@ import org.springframework.web.client.RestClientResponseException;
 
 /**
  * Client HTTP type pour les appels sortants vers Pastell.
- *
+ * <p>
  * Responsabilites :
+ * </p>
  *   - Construire les requetes HTTP conformes au protocole Pastell (form-data en entree,
- *     JSON en sortie, base path /api/v2/...).
- *   - Convertir les reponses Pastell en objets Java exploitables (records DTOs).
+ *     JSON en sortie, base path /api/v2/...).<br>
+ *   - Convertir les reponses Pastell en objets Java exploitables (records DTOs).<br>
  *   - Convertir TOUS les echecs (HTTP 4xx/5xx, timeouts, erreurs reseau) en
  *     {@link PastellApiException} typee, pour que le code metier appelant n'ait
  *     a connaitre qu'un seul type d'exception.
- *
+ * <p>
  * Ce que ce client NE fait PAS :
+ * </p>
  *   - Aucune logique metier : il ne sait pas ce qu'est une reservation, ni un PastellSync.
  *     Il prend des donnees primitives (entiteId, type) et retourne un DTO. Le mapping
- *     metier est la responsabilite de PastellSyncService (Paquet 3).
+ *     metier est la responsabilite de PastellSyncService (Paquet 3).<br>
  *   - Aucun retry : un appel = une tentative. Le retry sera ajoute au Lot 4
  *     via Spring Retry, en wrappant ce client. Garder ce client "stupide" facilite
- *     le test isole et la composition des comportements.
+ *     le test isole et la composition des comportements.<br>
  *   - Aucune persistance : il ne touche jamais a la base. Pure couche de transport.
- *
+ * <p>
  * Conditional bean :
  *   Comme {@link PastellConfig}, ce composant n'est instancie que si
  *   {@code pastell.enabled=true}. Quand l'integration est desactivee, ce bean
  *   est absent du contexte, ce qui evite toute injection accidentelle dans
  *   un service metier qui devrait fonctionner sans Pastell.
- *
+ * <p>
  * Analogie pedagogique :
  *   PastellClient est l'employe de l'accueil qui transmet des notes au siege
  *   (Pastell). Il ne sait rien des dossiers clients (les reservations), il sait
@@ -66,7 +68,7 @@ public class PastellClient {
 
     /**
      * Constructeur avec injection explicite du RestClient qualifie.
-     *
+     *<p>
      * Le {@link Qualifier} est obligatoire ici parce qu'on veut le RestClient
      * dedie Pastell (avec Basic Auth, base URL, interceptor de logging),
      * pas un eventuel autre RestClient generique du contexte.
@@ -80,17 +82,17 @@ public class PastellClient {
 
     /**
      * Cree un nouveau dossier Pastell vide pour une reservation.
-     *
+     *<p>
      * Equivalent metier : "ouvrir un dossier de reservation au siege".
      * A ce stade, le dossier est CREE mais VIDE : les champs metier
      * (dates, client, hotel, prix) seront pousses ulterieurement via
      * modify-document (Lot 3+).
-     *
+     *</p>
      * Cette methode ne prend aucun parametre : tout vient de PastellProperties.
      * Au Lot 3+, quand on aura besoin de pousser les donnees metier, on ajoutera
      * une methode {@code modifyDocument(String idD, Reservation r)} qui prendra
      * la reservation en parametre.
-     *
+     *<p>
      * Format de la requete envoyee :
      * <pre>
      *   POST /api/v2/entite/{entiteId}/document

@@ -12,6 +12,9 @@ import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.support.BasicAuthenticationInterceptor;
+import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.retry.support.RetryTemplate;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
 import java.io.IOException;
@@ -31,6 +34,8 @@ import java.time.Duration;
  */
 @Configuration
 @EnableConfigurationProperties(PastellProperties.class)
+@EnableRetry
+@EnableScheduling
 @ConditionalOnProperty(name = "pastell.enabled", havingValue = "true")
 public class PastellConfig {
 
@@ -82,6 +87,48 @@ public class PastellConfig {
                 .defaultHeader(HttpHeaders.USER_AGENT, "Sejour-Backend/1.0 (Pastell-Integration)")
                 .defaultHeader(HttpHeaders.ACCEPT, "application/json")
                 .requestFactory(requestFactory())
+                .build();
+    }
+
+    /**
+     * RetryTemplate utilise par le wrapper PastellClientWithRetry (Lot 4, niveau 1).
+     *
+     * Configure depuis PastellProperties.Retry :
+     *   - politique simple : maxAttempts (inclut la tentative initiale)
+     *   - backoff exponentiel : initialDelay -> initialDelay * multiplier^n,
+     *     plafonne a maxDelay
+     *
+     * On declare le bean au niveau Pastell (pas global) pour deux raisons :
+     *   1. Cohabitation : si un autre module veut un RetryTemplate avec d'autres
+     *      reglages, il declare le sien sans collision.
+     *   2. Conditional : ce bean disparait quand pastell.enabled=false,
+     *      coherent avec le reste de la config Pastell.
+     *
+     * Pourquoi le RetryTemplate "filtre par classe d'exception" n'est PAS configure ici ?
+     *   - On veut une politique de decision plus fine que "telle classe oui, telle non" :
+     *     dans notre cas, c'est le code HTTP qui decide (501 retryable, 401 non).
+     *   - Cette decision est faite dans PastellClientWithRetry via un appel a
+     *     PastellRetryPolicy. Quand l'exception est non-retryable, le wrapper appelle
+     *     {@code context.setExhaustedOnly()} pour stopper le retry immediatement.
+     *   - Avantage : un seul endroit de verite pour la politique (PastellRetryPolicy),
+     *     reutilise par le scheduler aussi.
+     */
+    @Bean("pastellRetryTemplate")
+    public RetryTemplate pastellRetryTemplate() {
+        PastellProperties.Retry retryProps = properties.getRetry();
+        log.info("Initialisation du RetryTemplate Pastell : maxAttempts={}, initialDelay={}ms, multiplier={}, maxDelay={}ms",
+                retryProps.getMaxAttemptsImmediate(),
+                retryProps.getInitialDelayMs(),
+                retryProps.getMultiplier(),
+                retryProps.getMaxDelayMs());
+
+        return RetryTemplate.builder()
+                .maxAttempts(retryProps.getMaxAttemptsImmediate())
+                .exponentialBackoff(
+                        retryProps.getInitialDelayMs(),
+                        retryProps.getMultiplier(),
+                        retryProps.getMaxDelayMs())
+                .retryOn(com.example.springhotel.integration.pastell.client.PastellApiException.class)
                 .build();
     }
 

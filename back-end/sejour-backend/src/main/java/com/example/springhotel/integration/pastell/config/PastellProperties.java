@@ -106,6 +106,9 @@ public class PastellProperties {
     @Valid
     private Polling polling = new Polling();
 
+    @Valid
+    private Retry retry = new Retry();
+
     /**
      * Configuration du webhook entrant Pastell -> Sejour (Lot 5).
      *
@@ -189,5 +192,110 @@ public class PastellProperties {
                             "Valeur courante : " + entiteId
             );
         }
+        // Ajout Lot 4 : coherence entre maxAttemptsImmediate et maxTentativesTotal
+        if (retry.getMaxAttemptsImmediate() > retry.getMaxTentativesTotal()) {
+            throw new IllegalStateException(
+                    "pastell.retry.max-attempts-immediate (" + retry.getMaxAttemptsImmediate()
+                            + ") ne peut pas depasser pastell.retry.max-tentatives-total ("
+                            + retry.getMaxTentativesTotal() + "). "
+                            + "Sinon le niveau 1 epuiserait deja le quota total des la premiere passe."
+            );
+        }
+    }
+
+    /**
+     * Configuration du retry des appels sortants Pastell (Lot 4).
+     *<p>
+     * Deux niveaux de retry coexistent et utilisent la meme configuration :
+     *<p>
+     *   Niveau 1 - retry court immediat (RetryTemplate dans PastellClientWithRetry) :
+     *     Quand l'appel Pastell echoue, on retente immediatement avec un backoff
+     *     exponentiel. Concretement : echec -> attendre {@code initialDelayMs},
+     *     re-essayer. Echec encore -> attendre {@code initialDelayMs * multiplier},
+     *     re-essayer. Etc. jusqu'a {@code maxAttemptsImmediate} tentatives au total
+     *     ou {@code maxDelayMs} comme plafond entre deux tentatives.
+     *     Ce niveau absorbe les hoquets reseau et les 5xx fugaces.
+     *<p>
+     *   Niveau 2 - reprise differee (PastellRetryScheduler) :
+     *     Si malgre le niveau 1 la synchro echoue (ex. Pastell down depuis longtemps),
+     *     le PastellSync est persiste en EN_RETRY. Toutes les
+     *     {@code schedulerIntervalMs}, le scheduler reprend les EN_RETRY (et
+     *     les PENDING orphelins) en lots de {@code schedulerBatchSize}, du plus
+     *     ancien au plus recent (FIFO). Au-dela de {@code maxTentativesTotal}
+     *     tentatives totales, le sync bascule en EN_ERREUR definitif.
+     *<p>
+     * Note DevRel : un partenaire qui adopte cette integration peut tuner les delais
+     * sans recompiler. Toutes ces valeurs sont surchargeables via application.properties
+     * ou variables d'environnement (PASTELL_RETRY_*).
+     */
+    @Data
+    public static class Retry {
+
+        /**
+         * Nombre maximum de tentatives pour le retry court (niveau 1).
+         * Inclut la tentative initiale : {@code maxAttemptsImmediate=3} signifie
+         * 1 tentative + 2 retries au maximum.
+         */
+        @Min(1)
+        private int maxAttemptsImmediate = 3;
+
+        /**
+         * Delai avant le PREMIER retry du niveau 1, en millisecondes.
+         * Le delai croit ensuite par {@code multiplier} a chaque echec.
+         */
+        @Min(0)
+        private long initialDelayMs = 200L;
+
+        /**
+         * Facteur multiplicatif du backoff exponentiel.
+         * Avec multiplier=2.0 et initialDelayMs=200 : 200ms, 400ms, 800ms, 1600ms...
+         * (jusqu'au plafond {@code maxDelayMs}).
+         */
+        @Min(1)
+        private double multiplier = 2.0;
+
+        /**
+         * Plafond du delai entre deux tentatives (niveau 1), en millisecondes.
+         * Empeche que le backoff explose si on configure un grand nombre de tentatives.
+         */
+        @Min(0)
+        private long maxDelayMs = 2000L;
+
+        /**
+         * Active ou non le scheduler de reprise (niveau 2).
+         * Pratique pour le desactiver en local (developpement) tout en gardant
+         * pastell.enabled=true.
+         */
+        private boolean schedulerEnabled = true;
+
+        /**
+         * Intervalle entre deux passes du scheduler de reprise, en millisecondes.
+         * Defaut : 5 minutes. Compromis entre reactivite (rattraper rapidement
+         * une panne resolue) et charge (ne pas spammer Pastell quand il y a
+         * beaucoup de syncs en attente).
+         */
+        @Min(1000)
+        private long schedulerIntervalMs = 300_000L;
+
+        /**
+         * Nombre maximum de syncs traites par passe du scheduler.
+         * Empeche le scheduler de noyer Pastell apres une panne longue
+         * qui aurait laisse des centaines de syncs en attente.
+         */
+        @Min(1)
+        private int schedulerBatchSize = 20;
+
+        /**
+         * Nombre maximum de tentatives TOTALES (niveau 1 + niveau 2 cumules)
+         * avant qu'un sync soit declare EN_ERREUR definitif et plus jamais retente.
+         *
+         * Exemple avec maxAttemptsImmediate=3 et maxTentativesTotal=10 :
+         *   - 1ere passe (listener) : tentatives 1, 2, 3 niveau 1, echec -> EN_RETRY (tentatives=3)
+         *   - 1ere passe scheduler  : tentatives 4, 5, 6 niveau 1, echec -> EN_RETRY (tentatives=6)
+         *   - 2eme passe scheduler  : tentatives 7, 8, 9 niveau 1, echec -> EN_RETRY (tentatives=9)
+         *   - 3eme passe scheduler  : tentative 10 niveau 1, echec -> EN_ERREUR (tentatives=10)
+         */
+        @Min(1)
+        private int maxTentativesTotal = 10;
     }
 }

@@ -12,8 +12,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 /**
  * Listener Spring qui reagit a {@link ReservationCreatedEvent} pour declencher
  * la synchronisation vers Pastell.
- *
+ *<p>
  * Pourquoi {@link TransactionalEventListener} avec phase AFTER_COMMIT ?
+ * <p>
  *   - Spring met les evenements en attente jusqu'au commit reussi de la
  *     transaction qui les a publies.
  *   - Si la creation de la reservation echoue (rollback), le listener N'EST
@@ -21,22 +22,25 @@ import org.springframework.transaction.event.TransactionalEventListener;
  *   - Si le commit reussit, le listener s'execute hors de la transaction
  *     d'origine, ce qui evite de propager d'eventuelles exceptions Pastell
  *     vers la transaction de la reservation.
- *
+ *</p>
  * Pourquoi pas {@link org.springframework.context.event.EventListener} simple ?
+ * <p>
  *   - Avec un EventListener simple, le listener s'execute DANS la transaction
  *     d'origine, AVANT le commit. Si Pastell echoue et qu'on n'attrape pas
  *     l'exception, la transaction rollback et la reservation est perdue.
  *   - Avec TransactionalEventListener AFTER_COMMIT, on est garanti que la
  *     reservation existe bien en base au moment ou on appelle Pastell.
- *
+ *<p>
  * Pourquoi tres peu de logique ici ?
+ * <p>
  *   - Ce listener est volontairement "stupide" : il delegue immediatement
  *     a PastellSyncService. Toute la logique metier (idempotence, persistance
  *     PENDING, gestion des erreurs) est dans le service.
  *   - Avantage : on peut tester PastellSyncService en isolation totale (Mockito),
  *     et le listener ne necessite qu'un test d'integration end-to-end.
- *
+ *</p>
  * Bascule en async au Lot 4+ :
+ * <p>
  *   Au Lot 4, on pourra ajouter {@code @Async} sur cette methode pour que
  *   l'appel Pastell n'attende pas la reponse de la reservation cote client.
  *   Avec @TransactionalEventListener + @Async, la reservation est commit,

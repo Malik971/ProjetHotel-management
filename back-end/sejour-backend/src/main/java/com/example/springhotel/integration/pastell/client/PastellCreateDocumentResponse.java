@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Reponse de l'appel POST /api/v2/entite/{idEntite}/document.
- *
+ * <p>
  * Forme JSON cote Pastell (et cote mock) :
  * <pre>
  * {
@@ -21,13 +21,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *     dans PastellSync.pastellDocumentId pour pouvoir retrouver le dossier plus tard.
  *   - L'annotation {@link JsonIgnoreProperties} avec {@code ignoreUnknown = true}
  *     garantit qu'ajouter de nouveaux champs cote Pastell ne cassera pas la deserialisation.
- *
+ * <p>
  * Pourquoi un record et pas une classe ?
  *   - Immuable par construction : pas de risque qu'un test ou un service modifie
  *     accidentellement la valeur retournee par PastellClient.
  *   - Concis : pas de boilerplate getters / equals / hashCode / toString.
  *   - Coherent avec le style des DTOs cote pastell-mock (eux aussi en records).
- *
+ * <p>
  * Pourquoi {@link JsonProperty} et pas une PropertyNamingStrategy globale ?
  *   - Une strategy globale s'appliquerait a TOUTES les serialisations Jackson
  *     du backend (controllers REST, DTOs metier, etc.) et casserait la convention

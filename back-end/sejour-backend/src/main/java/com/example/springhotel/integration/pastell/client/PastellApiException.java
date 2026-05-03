@@ -4,7 +4,7 @@ package com.example.springhotel.integration.pastell.client;
  * Exception levee par {@link PastellClient} quand un appel HTTP a Pastell
  * retourne un statut d'erreur (4xx ou 5xx) ou echoue pour une raison technique
  * (timeout, erreur reseau, body illisible).
- *
+ *<p>
  * Pourquoi une exception dediee plutot que de laisser remonter
  * {@code RestClientException} de Spring ?
  *   - On veut que le code appelant (PastellSyncService au Paquet 3) puisse
@@ -16,7 +16,7 @@ package com.example.springhotel.integration.pastell.client;
  *   - La distinction permet aussi au futur retry du Lot 4 de decider quoi
  *     reessayer : un 401 (mauvais credentials) ne doit JAMAIS etre reessaye,
  *     un 500 ou un timeout OUI.
- *
+ *<p>
  * Cas d'usage typique cote service appelant :
  * <pre>
  * try {
