@@ -10,28 +10,32 @@ import org.springframework.stereotype.Component;
 
 /**
  * Wrapper de retry court (niveau 1) au-dessus de {@link PastellClient}.
- *
+ *<p>
  * Role :
+ * <p>
  *   - Encapsuler chaque appel Pastell dans un RetryTemplate avec backoff exponentiel.
  *   - Consulter {@link PastellRetryPolicy} pour stopper immediatement le retry
  *     sur une exception non-retryable (ex. 401 mauvais credentials).
  *   - Logger les tentatives pour le diagnostic.
- *
+ *<p>
  * Pourquoi un wrapper plutot que d'annoter PastellClient avec @Retryable ?
+ * <p>
  *   - PastellClient reste une couche transport pure, testable sans Spring Retry.
  *   - On peut tester la politique de retry isolement (PastellClientWithRetryTest)
  *     sans interference avec la couche transport.
  *   - Le wrapper est explicitement nomme : on voit dans les imports qui appelle
  *     "client direct" et qui appelle "client avec retry". Pas de magie AOP cachee.
- *
+ *<p>
  * Pourquoi {@code context.setExhaustedOnly()} et pas une autre exception ?
+ * <p>
  *   - Spring Retry permet de signaler au RetryContext "j'ai decide qu'on arretait
  *     la, ne re-essaie pas, propage l'exception telle quelle".
  *   - Solution alternative : creer une RetryableException et NonRetryableException
  *     distinctes et configurer retryOn(RetryableException.class). Mais ca obligerait
  *     a modifier PastellClient pour qu'il choisisse, ce qu'on veut eviter (couplage).
- *
+ *<p>
  * Analogie pedagogique :
+ * <p>
  *   PastellClient est le standardiste qui compose le numero. PastellClientWithRetry
  *   est le standardiste senior qui dit "ah, ca sonne occupe, on rappelle dans 200ms,
  *   puis 400ms, puis 800ms, et au bout de 3 essais on abandonne pour aujourd'hui".
@@ -59,8 +63,9 @@ public class PastellClientWithRetry {
 
     /**
      * Cree un dossier Pastell avec retry court automatique en cas d'echec retryable.
-     *
+     *<p>
      * Comportement :
+     * <p>
      *   - Succes au premier coup : retourne la reponse, aucune trace de retry.
      *   - Echec retryable (5xx, NETWORK, 408, 429) : RetryTemplate ressaie selon
      *     la config, jusqu'a maxAttempts ou jusqu'au premier succes.

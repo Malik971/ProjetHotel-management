@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *   - url manquante
  *   - username manquant
  *   - password manquant
- *   - entite-id manquante
+ *   - entite-id invalide
  *
  * Approche : on lance SpringApplication avec une config incomplete et on verifie
  * que le contexte echoue avec un IllegalStateException qui contient le nom de
@@ -27,11 +27,25 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * produit destine a etre integre par des tiers, la qualite des messages d'echec
  * vaut autant que celle de la documentation nominale.
  *
- * Profil "test" active manuellement :
- *   Comme on lance SpringApplication directement (pas via @SpringBootTest),
- *   on ne peut pas utiliser @ActiveProfiles. On force le profil "test" via
- *   {@link SpringApplication#setAdditionalProfiles(String...)} pour que
- *   application-test.properties soit charge (H2 en memoire, Flyway desactive).
+ * Robustesse face aux profils :
+ *   On force EXPLICITEMENT spring.profiles.active=test pour ce test, et non plus
+ *   via setAdditionalProfiles. Raison : setAdditionalProfiles AJOUTE un profil
+ *   aux profils deja actifs (variable d'environnement, configuration IntelliJ,
+ *   etc.). Si "dev" est actif par ailleurs, application-dev.properties est
+ *   charge et fournit potentiellement des valeurs (url, username, password)
+ *   qui empechent la validation de planter. En forcant via l'argument CLI
+ *   --spring.profiles.active=test, on remplace la liste complete des profils
+ *   actifs et on garantit que seul application-test.properties est charge.
+ *
+ * Robustesse face aux properties par defaut :
+ *   Meme avec uniquement le profil "test", application.properties (toujours
+ *   charge en base) peut contenir des valeurs Pastell par defaut. On surcharge
+ *   donc EXPLICITEMENT chaque property qu'on veut "vider" avec une chaine vide.
+ *   La validation utilise isBlank() qui traite "" comme invalide, donc le
+ *   comportement est garanti independamment de la cascade de properties.
+ *
+ * Le test ne devient ainsi sensible qu'aux arguments qu'il passe, pas a
+ * l'environnement de l'utilisateur. C'est ce qu'on attend d'un test unitaire.
  */
 class PastellPropertiesValidationTest {
 
@@ -39,6 +53,7 @@ class PastellPropertiesValidationTest {
     void startup_fails_when_url_is_missing() {
         assertThatThrownBy(() -> startWithProperties(
                 "--pastell.enabled=true",
+                "--pastell.url=",                          // explicitement vide
                 "--pastell.username=u",
                 "--pastell.password=p",
                 "--pastell.entite-id=1"
@@ -53,6 +68,7 @@ class PastellPropertiesValidationTest {
         assertThatThrownBy(() -> startWithProperties(
                 "--pastell.enabled=true",
                 "--pastell.url=http://localhost:9999",
+                "--pastell.username=",                     // explicitement vide
                 "--pastell.password=p",
                 "--pastell.entite-id=1"
         ))
@@ -67,6 +83,7 @@ class PastellPropertiesValidationTest {
                 "--pastell.enabled=true",
                 "--pastell.url=http://localhost:9999",
                 "--pastell.username=u",
+                "--pastell.password=",                     // explicitement vide
                 "--pastell.entite-id=1"
         ))
                 .rootCause()
@@ -94,17 +111,23 @@ class PastellPropertiesValidationTest {
      * parce qu'on veut que l'application CRASHE au demarrage, pas qu'elle
      * reussisse a se lever.
      *
-     * Active explicitement le profil "test" pour que application-test.properties
-     * soit charge en plus de application.properties. Sans ca, Spring tenterait
-     * de se connecter a PostgreSQL local (defini dans application.properties)
-     * et echouerait avec ConnectException avant meme d'arriver a la validation
-     * Pastell qu'on veut tester.
+     * Force le profil "test" via argument CLI plutot que via
+     * setAdditionalProfiles : cette forme REMPLACE la liste de profils actifs
+     * (alors que setAdditionalProfiles n'aurait fait qu'ajouter "test" aux
+     * profils deja actifs comme "dev", ce qui rendait le test fragile).
      */
     private void startWithProperties(String... args) {
         SpringApplication app = new SpringApplication(MinimalTestApp.class);
         app.setWebApplicationType(WebApplicationType.NONE);
-        app.setAdditionalProfiles("test");
-        app.run(args).close();
+
+        // Construire le tableau d'arguments final : --spring.profiles.active=test
+        // en premier, suivi des args du test. Cet argument CLI surcharge toute
+        // configuration externe (variables d'env, IntelliJ run config, etc.).
+        String[] finalArgs = new String[args.length + 1];
+        finalArgs[0] = "--spring.profiles.active=test";
+        System.arraycopy(args, 0, finalArgs, 1, args.length);
+
+        app.run(finalArgs).close();
     }
 
     /**
