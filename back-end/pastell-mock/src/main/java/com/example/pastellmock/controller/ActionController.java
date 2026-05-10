@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Controller HTTP pour l'action change-action de Pastell.
- *
+ *<p>
  * Endpoint expose :
  *   POST /api/v2/entite/{idEntite}/document/{idD}/action
- *
+ *<p>
  * Pourquoi un controller separe de DocumentController ?
  *   - SRP : DocumentController gere la creation et la lecture, ActionController
  *     gere les TRANSITIONS d'etat. Deux preoccupations distinctes.
@@ -25,9 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
  *     dedie sans trop de duplication.
  *   - Au prochain Lot, si on ajoute des endpoints de modification de "data"
  *     (modify-document), ils iront dans un troisieme controller.
- *
+ *<p>
  * Mode strict : form-data uniquement (cf. @PostMapping(consumes=...)).
- *
+ *<p>
  * Erreurs possibles (toutes traduites par PastellMockExceptionHandler) :
  *   - 400 Bad Request  : champ "action" manquant (MissingServletRequestParameterException)
  *   - 400 Bad Request  : transition invalide (IllegalStateException levee par le store)

@@ -1,0 +1,323 @@
+/* ============================================================
+ * components.css - Composants reutilisables
+ * ============================================================
+ *
+ * Boutons, badges, etats du workflow, animations, toasts.
+ * Tout ce qui est "micro-element" reutilisable plusieurs fois
+ * dans la page.
+ * ============================================================ */
+
+
+/* ====== Boutons ====== */
+
+.btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;       /* Animation douce du survol */
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn:hover {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.btn.primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn.primary:hover {
+  background: rgba(232, 184, 109, 0.08);   /* Halo amber translucide */
+}
+
+
+/* ====== Badges (etiquettes de statut) ====== */
+
+.badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+/* Variantes de couleur selon le sens du badge */
+.badge.ok      { background: rgba(76, 222, 140, 0.15); color: var(--ok);      border: 1px solid rgba(76, 222, 140, 0.3); }
+.badge.warn    { background: rgba(232, 127, 109, 0.15); color: var(--warn);    border: 1px solid rgba(232, 127, 109, 0.3); }
+.badge.neutral { background: rgba(152, 152, 176, 0.15); color: var(--neutral); border: 1px solid rgba(152, 152, 176, 0.3); }
+.badge.blue    { background: rgba(109, 184, 232, 0.15); color: var(--accent2); border: 1px solid rgba(109, 184, 232, 0.3); }
+
+.badge.mini {
+  font-size: 9px;       /* Variante miniature pour mettre une URL d'API */
+}
+
+
+/* ====== Workflow (machine a etats Pastell) ====== */
+
+.workflow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.wf-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wf-node {
+  padding: 5px 12px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  transition: all 0.3s;
+}
+
+/* Etat "actif" : le noeud courant du workflow */
+.wf-node.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(232, 184, 109, 0.08);
+  box-shadow: 0 0 12px rgba(232, 184, 109, 0.15);    /* Lueur amber */
+}
+
+/* Etat "succes terminal" : etat TERMINEE */
+.wf-node.terminal-ok {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: rgba(76, 222, 140, 0.06);
+}
+
+/* Etat "annulation terminal" : etat ANNULEE */
+.wf-node.terminal-cancel {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: rgba(232, 127, 109, 0.06);
+}
+
+.wf-arrow {
+  color: var(--border);
+  font-size: 14px;
+}
+
+.wf-arrow.active {
+  color: var(--accent);    /* La fleche s'allume si on est passe par cet etat */
+}
+
+.wf-separator {
+  color: var(--text-dim);
+  margin: 0 8px;
+}
+
+
+/* ====== Lignes cle/valeur (key-value display) ====== */
+
+.kv-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: baseline;
+}
+
+.kv-key {
+  color: var(--text-dim);
+  min-width: 160px;
+  font-size: 11px;
+}
+
+.kv-val {
+  color: var(--text);
+  font-size: 12px;
+  word-break: break-all;        /* Coupe les longues valeurs (ex: id_d) */
+}
+
+/* Variantes semantiques de la valeur */
+.kv-val.highlight { color: var(--accent); font-weight: 700; }
+.kv-val.green     { color: var(--ok); }
+.kv-val.red       { color: var(--warn); }
+.kv-val.blue      { color: var(--accent2); }
+.kv-val.dim       { color: var(--text-dim); font-style: italic; }
+
+
+/* ====== Boutons d'action Pastell ====== */
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 10px 14px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 140px;
+}
+
+.action-btn:hover:not(:disabled) {
+  border-color: var(--accent2);
+  color: var(--accent2);
+  background: rgba(109, 184, 232, 0.06);
+}
+
+.action-btn.danger:hover:not(:disabled) {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: rgba(232, 127, 109, 0.06);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.action-btn small {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+
+/* ====== Entrees du journal ====== */
+
+.journal-entry {
+  display: flex;
+  gap: 10px;
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(42, 42, 56, 0.5);
+  animation: fadeSlide 0.3s ease;     /* Animation a l'apparition */
+  align-items: center;
+}
+
+.journal-entry:last-child {
+  border-bottom: none;
+}
+
+/* Animation : entree depuis la gauche en s'eclairant */
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.j-idj {
+  color: var(--text-dim);
+  min-width: 50px;
+  font-size: 11px;
+}
+
+.j-action {
+  min-width: 180px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Couleurs par type d'action */
+.j-action.creation              { color: var(--accent2); }
+.j-action.en-attente-validation { color: #c5b4f7; }       /* Violet clair */
+.j-action.validee               { color: #b4e8c5; }       /* Vert clair */
+.j-action.confirmee             { color: var(--ok); }
+.j-action.terminee              { color: var(--accent); }
+.j-action.annulee               { color: var(--warn); }
+
+.j-idd  { color: var(--text-dim); font-size: 11px; }
+.j-date { color: var(--text-dim); font-size: 10px; margin-left: auto; }
+
+
+/* ====== Statut du polling ====== */
+
+.poll-status {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.poll-status.active {
+  color: var(--ok);          /* Vert quand le poll est ON */
+}
+
+.poll-counter {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+
+/* ====== Spinner de chargement ====== */
+
+.spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
+/* ====== Toast d'erreur (notification) ====== */
+
+.error-toast {
+  position: fixed;          /* Ne bouge pas au scroll */
+  bottom: 20px;
+  right: 20px;
+  background: var(--panel);
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-width: 360px;
+  display: none;            /* Cache par defaut, montre en JS */
+  z-index: 100;             /* Au-dessus de tout */
+  animation: fadeSlide 0.3s ease;
+}
+
+
+/* ====== Etat vide (placeholder) ====== */
+
+.empty-state {
+  color: var(--text-dim);
+  font-style: italic;
+  padding: 14px;
+  font-size: 11px;
+}
+
+
+/* ====== Tags de delta dans la coherence ====== */
+
+.delta-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-left: 6px;
+}
+
+.delta-aligned  { background: rgba(76, 222, 140, 0.1); color: var(--ok); }
+.delta-mismatch { background: rgba(232, 127, 109, 0.1); color: var(--warn); }

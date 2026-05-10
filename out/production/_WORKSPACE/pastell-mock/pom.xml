@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Module pastell-mock : simulation locale d'une instance Pastell -->
+    <!-- Utilise en developpement et en CI pour tester l'integration sans dependre -->
+    <!-- d'une instance Pastell reelle (Libriciel). -->
+    <!-- -->
+    <!-- Mode strict : form-data en entree, JSON en sortie, conforme au protocole -->
+    <!-- Pastell. Stateless en memoire (pas de JPA, pas de DB). -->
+    <parent>
+        <groupId>com.example</groupId>
+        <artifactId>sejour-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>pastell-mock</artifactId>
+    <name>pastell-mock</name>
+    <description>Mock Pastell embarque pour developpement et CI (port 8090)</description>
+
+    <dependencies>
+        <!-- API REST -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- HTTP Basic auth (Pastell n'accepte que ce mode) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Validation des payloads (anticipation Lot 2 : create-document.php, change-action.php) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Lombok : coherence avec sejour-backend -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Tests : JUnit 5, AssertJ, Mockito (toujours via le starter generique) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- spring-test : MockMvc, @AutoConfigureMockMvc, MockMvcRequestBuilders, etc. -->
+        <!-- Artefact Spring Framework, pas un starter Boot, donc nom stable. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- spring-security-test : helpers httpBasic(), with(user()), etc. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

@@ -4,7 +4,6 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 node_modules/
-
 ### STS ###
 .apt_generated
 .classpath
@@ -13,13 +12,11 @@ node_modules/
 .settings
 .springBeans
 .sts4-cache
-
 ### IntelliJ IDEA ###
 .idea
 *.iws
 *.iml
 *.ipr
-
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
@@ -29,10 +26,17 @@ node_modules/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
-
 ### VS Code ###
 .vscode/
 front-end/.gitignore
-
 ### Back-end ###
 application.properties
+
+### Variables d'environnement locales (secrets) ###
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+!.env.example
+!**/.env.example

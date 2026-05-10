@@ -22,6 +22,7 @@ import org.springframework.validation.annotation.Validated;
  *   pastell.type-dossier=reservation-hoteliere
  *   pastell.timeout-ms=5000
  *   pastell.webhook.enabled=false
+ *   pastell.polling.enabled=true
  *   pastell.polling.interval-ms=30000
  * </pre>
  *
@@ -110,7 +111,7 @@ public class PastellProperties {
     private Retry retry = new Retry();
 
     /**
-     * Configuration du webhook entrant Pastell -> Sejour (Lot 5).
+     * Configuration du webhook entrant Pastell -> Sejour.
      *
      * Pastell n'expose pas de webhooks natifs a ce jour. Cet endpoint est prevu
      * en anticipation d'une eventuelle evolution de l'API Pastell, ou pour un
@@ -127,15 +128,35 @@ public class PastellProperties {
 
     /**
      * Configuration du polling descendant Pastell -> Sejour (Lot 5).
-     *
-     * Un scheduler appelle journal.php a intervalle regulier pour detecter
-     * les transitions declenchees cote Pastell qui n'ont pas ete initiees par Sejour.
+     *<p>
+     * Un scheduler appelle GET /api/v2/journal a intervalle regulier pour detecter
+     * les transitions declenchees cote Pastell qui n'ont pas ete initiees par Sejour
+     * (typiquement : un agent qui valide ou annule un dossier directement dans
+     * l'interface Pastell).
      */
     @Data
     public static class Polling {
+
         /**
-         * Intervalle entre deux appels a journal.php.
+         * Active ou non le scheduler de polling descendant (Lot 5).
+         *<p>
+         * Symetrique de {@code retry.scheduler-enabled} : permet de desactiver
+         * finement le polling sans toucher a {@code pastell.enabled}. Utile :
+         *   - En local quand on travaille sur la sync montante et qu'on ne
+         *     veut pas etre derange par les logs du polling.
+         *   - Dans certains tests ou scenarios CI ou on veut tester la sync
+         *     montante seule.
+         *<p>
+         * Defaut a true : si l'integration Pastell est activee, le polling est
+         * actif par defaut, ce qui est le comportement attendu en production.
+         */
+        private boolean enabled = true;
+
+        /**
+         * Intervalle entre deux appels a GET /api/v2/journal.
          * 30 secondes par defaut : compromis entre reactivite UX et charge Pastell.
+         * Le minimum de 1000 ms evite les configurations hostiles qui taperaient
+         * Pastell plusieurs fois par seconde par erreur.
          */
         @Min(1000)
         private long intervalMs = 30000L;

@@ -1,0 +1,65 @@
+/* ============================================================
+ * variables.css - Design Tokens
+ * ============================================================
+ *
+ * Centralise toutes les valeurs reutilisables du design :
+ * couleurs, polices, tailles. Toute modification visuelle
+ * se fait ici, jamais dans les autres fichiers CSS.
+ *
+ * Pourquoi des variables CSS (custom properties) ?
+ *   - Modifier une couleur a un seul endroit met a jour toute l'app
+ *   - Permet le theming (clair/sombre) en surchargeant les valeurs
+ *   - Lisibilite : "var(--accent)" est plus parlant que "#e8b86d"
+ *
+ * Convention de nommage :
+ *   - --bg, --panel, --border : couleurs de fond
+ *   - --text, --text-dim      : couleurs de texte
+ *   - --accent, --accent2     : couleurs de mise en valeur
+ *   - --ok, --warn, --neutral : couleurs semantiques (etats)
+ *   - --mono, --serif         : polices
+ * ============================================================ */
+
+:root {
+  /* ====== Couleurs de fond ====== */
+  --bg: #0f0f12;          /* Fond principal de la page */
+  --panel: #16161c;       /* Fond des panneaux/cartes */
+  --panel2: #1c1c24;      /* Fond des sous-elements (inputs, headers) */
+  --border: #2a2a38;      /* Couleur des bordures discretes */
+
+  /* ====== Couleurs d'accent ====== */
+  --accent: #e8b86d;      /* Amber chaud, pour le titre, l'etat actif */
+  --accent2: #6db8e8;     /* Bleu froid, pour les actions et liens */
+
+  /* ====== Couleurs semantiques (etats) ====== */
+  --ok: #4cde8c;          /* Vert : succes, statut TERMINEE */
+  --warn: #e87f6d;        /* Orange/rouge : erreurs, divergence, ANNULEE */
+  --neutral: #9898b0;     /* Gris doux : etats neutres, badges par defaut */
+
+  /* ====== Couleurs de texte ====== */
+  --text: #e8e8f0;        /* Texte principal, contraste eleve */
+  --text-dim: #6a6a80;    /* Texte secondaire, labels, dates */
+
+  /* ====== Polices ====== */
+  --mono: 'Space Mono', monospace;       /* Police principale, look "developpeur" */
+  --serif: 'DM Serif Display', serif;    /* Police elegante pour le titre */
+}
+
+/* ============================================================
+ * Reset CSS minimaliste
+ * ============================================================
+ *
+ * Supprime les marges et paddings par defaut des navigateurs
+ * (qui varient entre Chrome, Firefox, Safari) pour avoir une
+ * base coherente partout.
+ *
+ * box-sizing: border-box garantit que padding + border sont
+ * INCLUS dans la largeur d'un element. Sans ca, un div en
+ * width:100% + padding:10px ferait 100% + 20px et casserait
+ * les layouts. C'est l'un des reflexes CSS les plus utiles.
+ * ============================================================ */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}

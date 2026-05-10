@@ -78,7 +78,7 @@ public class DocumentTransitions {
      * Table des transitions :
      * cle  = etat courant
      * valeur = map(action -> etat cible)
-     *
+     *<p>
      * LinkedHashMap pour preserver l'ordre d'insertion : utile uniquement pour
      * que availableActions() retourne les actions dans un ordre stable et
      * lisible (validation avant annulation par exemple). Un TreeMap aurait fait

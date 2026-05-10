@@ -21,7 +21,7 @@ import java.util.Set;
 
 /**
  * Scheduler de reprise des synchronisations Pastell echouees (Lot 4 niveau 2).
- *
+ *<p>
  * Role :
  *   - Toutes les {@code pastell.retry.scheduler-interval-ms} millisecondes,
  *     ramasse les PastellSync en EN_RETRY (ou PENDING orphelins) et les retente.
@@ -31,7 +31,7 @@ import java.util.Set;
  *   - Avant d'appeler le service, filtre les syncs dont l'erreur n'est plus
  *     retryable (ex. si la politique a change entre temps) ou qui ont depasse
  *     {@code maxTentativesTotal} : ces syncs sont basculees en EN_ERREUR ici meme.
- *
+ *<p>
  * Pourquoi un fixedDelay et pas un fixedRate ou un cron ?
  *   - fixedDelay attend la fin de la passe precedente AVANT de demarrer le delai.
  *     Si une passe prend 30 secondes, la prochaine demarre 5 minutes apres la fin.
@@ -39,20 +39,20 @@ import java.util.Set;
  *   - fixedRate planifie au temps T+X meme si la passe precedente n'est pas finie :
  *     risque de chevauchement et de double-traitement si on a eu un coup de bourre.
  *   - cron est plus expressif mais overkill pour un job a frequence reguliere.
- *
+ *<p>
  * Pourquoi pas {@code @Async} sur le scheduler ?
  *   - Le scheduler tourne deja sur un thread dedie de Spring (TaskScheduler).
  *     Inutile d'ajouter @Async, ce ne ferait que rajouter un thread inutile.
  *   - Si une passe est lente, fixedDelay garantit qu'elle ne sera pas relancee
  *     avant d'avoir fini.
- *
+ *<p>
  * Pourquoi pas une transaction qui englobe toute la passe ?
  *   - On veut que chaque sync soit retraite dans sa propre transaction,
  *     isolee des autres. Si le sync N echoue de maniere catastrophique
  *     (NPE, OOM partiel, etc.), les syncs N+1, N+2... doivent quand meme etre
  *     traites dans la meme passe. C'est PastellSyncService.retraiterSync
  *     qui ouvre sa propre transaction REQUIRES_NEW.
- *
+ *<p>
  * Conditional :
  *   - {@code pastell.enabled=true} sinon aucune intention de parler a Pastell.
  *   - {@code pastell.retry.scheduler-enabled=true} pour pouvoir desactiver

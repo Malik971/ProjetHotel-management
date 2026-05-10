@@ -15,6 +15,11 @@ import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Configuration de la securite du mock Pastell.
@@ -23,6 +28,8 @@ import org.springframework.security.web.SecurityFilterChain;
  *   - HTTP Basic uniquement (Pastell n'accepte rien d'autre)
  *   - Stateless : pas de session, chaque requete porte ses credentials
  *   - CSRF desactive : API REST, pas de formulaire HTML
+ *   - CORS permissif : c'est un MOCK DEV/CI, le dashboard demo est ouvert
+ *     depuis file:// ou localhost. Cette config ne va JAMAIS en production.
  *   - {@code /api/version.php} : ANONYME, sert de handshake / healthcheck
  *   - Tout le reste de {@code /api/**} : protege par HTTP Basic
  *
@@ -46,16 +53,12 @@ public class MockSecurityConfig {
 
     /**
      * Login de l'utilisateur Pastell mock.
-     * Doit etre exporte comme variable d'environnement avant le demarrage :
-     * {@code export PASTELL_MOCK_USERNAME=sejour}
      */
     @Value("${pastell.mock.username}")
     private String mockUsername;
 
     /**
      * Mot de passe de l'utilisateur Pastell mock.
-     * Doit etre exporte comme variable d'environnement avant le demarrage :
-     * {@code export PASTELL_MOCK_PASSWORD=sejour-mock-pwd}
      */
     @Value("${pastell.mock.password}")
     private String mockPassword;
@@ -64,18 +67,23 @@ public class MockSecurityConfig {
     public SecurityFilterChain mockSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
+                // Active CORS et le branche sur le bean corsConfigurationSource defini ci-dessous.
+                // Sans cette ligne, le serveur ignore les headers CORS meme si le bean existe.
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Handshake anonyme : sert a verifier la joignabilite du mock
-                        // sans avoir besoin de credentials valides cote client.
+                        // Pre-flight CORS (OPTIONS) : autoriser sans authentification.
+                        // Sans ca, le navigateur recoit un 401 sur le pre-flight et bloque
+                        // tout, meme avant d'envoyer la vraie requete.
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Handshake anonyme
                         .requestMatchers(HttpMethod.GET, "/api/version.php").permitAll()
 
-                        // Tout le reste de l'API Pastell est protege par HTTP Basic
+                        // API Pastell : protegee par HTTP Basic
                         .requestMatchers("/api/**").authenticated()
 
-                        // Tout autre chemin (ex. /, /error) : on laisse passer
-                        // pour ne pas casser les pages d'erreur Spring par defaut
                         .anyRequest().permitAll()
                 )
                 .httpBasic(Customizer.withDefaults())
@@ -83,27 +91,52 @@ public class MockSecurityConfig {
     }
 
     /**
-     * Utilisateur unique du mock.
-     * En vrai Pastell, plusieurs utilisateurs peuvent exister. Pour le mock,
-     * un seul suffit : c'est l'utilisateur technique que sejour-backend
-     * utilisera pour s'authentifier.
+     * Configuration CORS permissive : autorise toutes les origines, methodes
+     * et headers, et permet l'envoi de credentials (Authorization Basic).
+     *
+     * POURQUOI AUSSI PERMISSIF ?
+     *   - Ce mock est un outil de dev/demo local. Il n'est jamais expose sur
+     *     internet, ni en production.
+     *   - Le dashboard de demo (springhotel-pastell-demo.html) peut etre ouvert
+     *     depuis file:// (origine "null"), depuis localhost:5173, depuis un IDE,
+     *     etc. On ne veut pas avoir a maintenir une whitelist d'origines.
+     *   - La vraie barriere de securite reste l'authentification HTTP Basic :
+     *     un attaquant qui aurait le mot de passe pourrait deja appeler le mock
+     *     directement sans passer par CORS.
+     *
+     * EN PRODUCTION (sur un vrai Pastell) :
+     *   - Cette config n'existe pas, parce que le mock n'existe pas en prod.
+     *   - Le vrai Pastell de Libriciel a sa propre politique CORS, decidee
+     *     par les administrateurs de la plateforme.
      */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        // allowedOriginPatterns au lieu de allowedOrigins : permet les wildcards
+        // ET le credentials=true en meme temps (allowedOrigins("*") + credentials=true
+        // est rejete par Spring depuis la version 5.3 pour des raisons de securite).
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
     @Bean
     public UserDetailsService mockUserDetailsService() {
         UserDetails sejourUser = User.builder()
                 .username(mockUsername)
                 .password(mockPassword)
-                // Pas de role specifique : Pastell ne fait pas d'autorisation
-                // par role HTTP, c'est gere au niveau metier (entite_id)
                 .authorities("PASTELL_USER")
                 .build();
         return new InMemoryUserDetailsManager(sejourUser);
     }
 
-    /**
-     * NoOpPasswordEncoder pour stocker les mots de passe en clair en memoire.
-     * Voir le javadoc de la classe pour la justification.
-     */
     @Bean
     @SuppressWarnings("deprecation")
     public PasswordEncoder mockPasswordEncoder() {

@@ -1,0 +1,224 @@
+/* ============================================================
+ * layout.css - Structure de la page
+ * ============================================================
+ *
+ * Gere les blocs principaux : body, header, sections, grille
+ * a deux colonnes pour les panneaux Sejour/Pastell.
+ *
+ * Tout ce qui est "ou est place quel element" est ici.
+ * Tout ce qui est "comment cet element est decore" va dans
+ * components.css.
+ * ============================================================ */
+
+
+/* ====== Page racine ====== */
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  min-height: 100vh;     /* Au moins toute la hauteur de l'ecran */
+  padding: 24px;          /* Marge interieure autour de tout le contenu */
+}
+
+
+/* ====== Header (titre + sous-titre en haut) ====== */
+
+header {
+  display: flex;                       /* Layout horizontal */
+  align-items: baseline;               /* Aligne titre et sous-titre sur leur ligne de base */
+  gap: 16px;                           /* Espace entre eux */
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  font-family: var(--serif);
+  font-size: 26px;
+  color: var(--accent);
+  letter-spacing: -0.5px;
+}
+
+header .subtitle {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+
+/* ====== Barre de configuration (URLs et credentials) ====== */
+
+.config-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;          /* Passe a la ligne sur petit ecran */
+  margin-bottom: 24px;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  align-items: flex-end;    /* Aligne en bas (pour que les inputs et boutons soient sur la meme ligne) */
+}
+
+.config-bar label {
+  display: flex;
+  flex-direction: column;   /* Label au-dessus du input */
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.config-bar input {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 3px;
+  width: 200px;
+}
+
+.config-bar input:focus {
+  outline: 1px solid var(--accent);    /* Halo amber au focus pour bien voir l'input actif */
+}
+
+
+/* ====== Grille principale (Sejour | Pastell cote a cote) ====== */
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;       /* Deux colonnes egales */
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+
+/* ====== Panneau (carte rectangulaire avec header + body) ====== */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;        /* Empeche les enfants de deborder des coins arrondis */
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;       /* Titre a gauche, badge a droite */
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel2);
+}
+
+.panel-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+}
+
+.panel-title span {
+  color: var(--accent);
+  margin-right: 6px;
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+
+/* ====== Ligne d'input (champ + bouton) ====== */
+
+.id-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel2);
+}
+
+.id-input-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.id-input-row input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 5px 9px;
+  border-radius: 3px;
+  width: 180px;
+}
+
+.id-input-row input:focus {
+  outline: 1px solid var(--accent);
+}
+
+
+/* ====== Panneau de cohérence (visible uniquement quand les 2 cotes charges) ====== */
+
+.coherence-panel {
+  margin-bottom: 16px;
+}
+
+
+/* ====== Panneau d'actions ====== */
+
+.actions-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.actions-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px;
+}
+
+
+/* ====== Journal d'evenements ====== */
+
+.journal-log {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.journal-entries {
+  max-height: 220px;        /* Limite la hauteur, scroll si plus d'entrees */
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+
+/* ====== Barre de controle du polling ====== */
+
+.poll-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--panel2);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}

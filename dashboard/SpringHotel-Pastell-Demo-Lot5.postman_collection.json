@@ -1,0 +1,423 @@
+{
+  "info": {
+    "name": "SpringHotel × Pastell — Démo Lot 5",
+    "_postman_id": "springhotel-pastell-demo-lot5",
+    "description": "Collection de démonstration complète du flux bidirectionnel SpringHotel ↔ Pastell.\n\nPré-requis :\n  - sejour-backend sur http://localhost:8080 (pastell.enabled=true, pastell.polling.enabled=true)\n  - pastell-mock sur http://localhost:8090\n\nOrdre d'exécution :\n  1. Créer une réservation (Sejour)\n  2. Observer le PastellSync créé (Sejour)\n  3. Lire l'état du dossier dans Pastell-mock\n  4. Lire le journal initial (vide ou juste 'creation')\n  5. Déclencher l'action 'validation' (Pastell)\n  6. Déclencher l'action 'validation' (Pastell) — 2e validation → état 'validee'\n  7. Déclencher l'action 'confirmation' (Pastell) → état 'confirmee'\n  8. Déclencher l'action 'terminaison' OU 'annulation' (Pastell)\n  9. Lire le journal complet (toutes les transitions)\n  10. Observer la reservation Sejour après le poll\n\nVariables de collection utilisées :\n  - sejour_url        : http://localhost:8080\n  - mock_url          : http://localhost:8090\n  - mock_user         : sejour\n  - mock_pass         : sejour123\n  - reservation_id    : (rempli automatiquement à l'étape 1)\n  - id_d              : (rempli automatiquement à l'étape 2)\n  - last_id_j         : 0 (curseur manuel, mis à jour à l'étape 9)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "sejour_url", "value": "http://localhost:8080" },
+    { "key": "mock_url",   "value": "http://localhost:8090" },
+    { "key": "mock_user",  "value": "sejour" },
+    { "key": "mock_pass",  "value": "sejour123" },
+    { "key": "reservation_id", "value": "" },
+    { "key": "id_d",           "value": "" },
+    { "key": "last_id_j",      "value": "0" }
+  ],
+  "item": [
+    {
+      "name": "🏨 1. Créer une réservation (Sejour)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('reservation_id', json.id);",
+              "console.log('reservation_id capturé :', json.id);",
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('reservation_id présent', () => pm.expect(json.id).to.be.a('number'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chambreId\": 1,\n  \"dateDebut\": \"2026-09-01\",\n  \"dateFin\": \"2026-09-05\",\n  \"nomClient\": \"Alice Martin\",\n  \"emailClient\": \"alice.martin@demo.fr\",\n  \"telephoneClient\": \"0612345678\",\n  \"nombrePersonnes\": 2\n}"
+        },
+        "url": {
+          "raw": "{{sejour_url}}/api/reservations",
+          "host": ["{{sejour_url}}"],
+          "path": ["api", "reservations"]
+        },
+        "description": "Crée une réservation côté Sejour.\n\n⚡ Ce qui se passe en coulisses :\n  1. ReservationService.creerReservation() persiste la réservation en DB (statut = CONFIRMEE)\n  2. Un ReservationCreatedEvent est publié\n  3. ReservationCreatedListener le reçoit AFTER_COMMIT\n  4. PastellSyncService appelle POST /api/v2/entite/1/document sur le mock\n  5. Le mock crée un dossier 'reservation-hoteliere' en état 'creation'\n  6. Un PastellSync est persisté (status=OK, pastellDocumentId=<id_d>)\n\n→ Notez l'id dans la réponse, il sera auto-capturé dans la variable {{reservation_id}}"
+      }
+    },
+    {
+      "name": "🔍 2. Lire le PastellSync (Sejour)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "if (json.pastellDocumentId) {",
+              "  pm.collectionVariables.set('id_d', json.pastellDocumentId);",
+              "  console.log('id_d capturé :', json.pastellDocumentId);",
+              "}",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('syncStatus = OK', () => pm.expect(json.syncStatus).to.equal('OK'));",
+              "pm.test('pastellDocumentId présent', () => pm.expect(json.pastellDocumentId).to.be.a('string').and.not.empty);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{sejour_url}}/api/admin/pastell-sync/reservation/{{reservation_id}}",
+          "host": ["{{sejour_url}}"],
+          "path": ["api", "admin", "pastell-sync", "reservation", "{{reservation_id}}"]
+        },
+        "description": "Lit le PastellSync créé par la sync montante (Lot 3).\n\nValeurs attendues :\n  - syncStatus = OK\n  - pastellDocumentId = <id_d> alloué par le mock (ex: 'a1b2c3d4e5f6')\n  - tentatives = 1\n  - derniereErreur = null\n\n→ L'id_d est auto-capturé dans {{id_d}} pour les requêtes suivantes.\n\nSi vous n'avez pas d'endpoint /api/admin/pastell-sync, utilisez une requête SQL directe :\n  SELECT * FROM pastell_sync WHERE reservation_id = <id>;"
+      }
+    },
+    {
+      "name": "📄 3. Lire l'état du dossier dans Pastell-mock",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('last_action = creation', () => pm.expect(json.info.last_action).to.equal('creation'));",
+              "console.log('État Pastell :', json.info.last_action, '| Actions possibles :', json.action_possible);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/entite/1/document/{{id_d}}",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "entite", "1", "document", "{{id_d}}"]
+        },
+        "description": "Lit l'état courant du dossier dans Pastell-mock.\n\nRéponse attendue :\n  {\n    'info': { 'last_action': 'creation', ... },\n    'action_possible': ['annulation', 'validation']\n  }\n\nLe dossier vient d'être créé, il est en état 'creation'.\nActions possibles depuis ici : validation, annulation."
+      }
+    },
+    {
+      "name": "📰 4. Journal Pastell — état initial",
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/journal?since_id_j=0",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "journal"],
+          "query": [
+            { "key": "since_id_j", "value": "0" }
+          ]
+        },
+        "description": "Lit le journal depuis le début.\n\nRéponse attendue : une entrée avec action='creation' pour le dossier qu'on vient de créer.\n\nC'est exactement ce que le polling Sejour appelle toutes les 30s :\n  GET /api/v2/journal?since_id_j=<last_id_j>\n\nNotez l'id_j de la dernière entrée : vous l'utiliserez dans la requête 9."
+      }
+    },
+    {
+      "name": "✅ 5. Action : validation → en-attente-validation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('last_action = en-attente-validation', () => pm.expect(json.info.last_action).to.equal('en-attente-validation'));",
+              "console.log('Nouvel état Pastell :', json.info.last_action, '| Actions dispo :', json.action_possible);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "action", "value": "validation", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/entite/1/document/{{id_d}}/action",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "entite", "1", "document", "{{id_d}}", "action"]
+        },
+        "description": "Un agent clique 'validation' dans l'interface Pastell.\n\nTransition : creation → en-attente-validation\n\n⚡ Ce qui se passe :\n  - Le mock enregistre la transition dans son journal interne\n  - Une nouvelle entrée idJ est créée avec action='en-attente-validation'\n  - Sejour ne le sait pas encore, il faudra attendre le prochain poll (30s)\n    ou déclencher manuellement le poll via POST /api/admin/pastell/poll\n\nCôté Sejour, le statut de la réservation reste CONFIRMEE\n(action neutre selon PastellActionMapper)"
+      }
+    },
+    {
+      "name": "✅ 6. Action : validation → validee",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('last_action = validee', () => pm.expect(json.info.last_action).to.equal('validee'));",
+              "console.log('Nouvel état Pastell :', json.info.last_action, '| Actions dispo :', json.action_possible);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "action", "value": "validation", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/entite/1/document/{{id_d}}/action",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "entite", "1", "document", "{{id_d}}", "action"]
+        },
+        "description": "Deuxième validation : en-attente-validation → validee\n\nActions possibles depuis 'validee' : confirmation, annulation."
+      }
+    },
+    {
+      "name": "✅ 7. Action : confirmation → confirmee",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('last_action = confirmee', () => pm.expect(json.info.last_action).to.equal('confirmee'));",
+              "console.log('Nouvel état Pastell :', json.info.last_action, '| Actions dispo :', json.action_possible);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "action", "value": "confirmation", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/entite/1/document/{{id_d}}/action",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "entite", "1", "document", "{{id_d}}", "action"]
+        },
+        "description": "Confirmation : validee → confirmee\n\nDepuis 'confirmee', la seule action possible est 'terminaison'.\nL'annulation n'est plus possible depuis cet état dans le mock."
+      }
+    },
+    {
+      "name": "🏁 8a. Action : terminaison → terminee (chemin HAPPY)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('last_action = terminee', () => pm.expect(json.info.last_action).to.equal('terminee'));",
+              "console.log('ÉTAT TERMINAL Pastell :', json.info.last_action, '| Actions dispo :', json.action_possible);",
+              "console.log('→ Au prochain poll Sejour (max 30s), la réservation passera en TERMINEE');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "action", "value": "terminaison", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/entite/1/document/{{id_d}}/action",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "entite", "1", "document", "{{id_d}}", "action"]
+        },
+        "description": "Terminaison : confirmee → terminee (état terminal)\n\n⚡ Ce qui va se passer côté Sejour au prochain poll :\n  - PastellInboundSyncService.runPollOnce() détecte l'entrée 'terminee' dans le journal\n  - PastellActionMapper.resolveTargetStatus('terminee') → StatutReservation.TERMINEE\n  - La réservation passe de CONFIRMEE à TERMINEE\n  - Le PastellSync.pastellEtatDernierConnu est mis à jour\n\n→ Vérifiez avec la requête 10 après 30s (ou après avoir déclenché le poll manuellement)"
+      }
+    },
+    {
+      "name": "❌ 8b. Action : annulation (chemin alternatif, depuis creation/en-attente/validee)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('last_action = annulee', () => pm.expect(json.info.last_action).to.equal('annulee'));",
+              "console.log('ÉTAT TERMINAL Pastell :', json.info.last_action);",
+              "console.log('→ Au prochain poll Sejour, la réservation passera en ANNULEE');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "action", "value": "annulation", "type": "text" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/entite/1/document/{{id_d}}/action",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "entite", "1", "document", "{{id_d}}", "action"]
+        },
+        "description": "Annulation : état courant → annulee (état terminal)\n\n⚠️ Cette requête est désactivée par défaut (elle suppose que le dossier\nn'est pas encore en 'confirmee', car l'annulation n'est plus possible depuis 'confirmee').\nPour la tester : repartez d'une nouvelle réservation, et lancez l'annulation\napuès la première validation seulement.\n\n⚡ Ce qui va se passer côté Sejour au prochain poll :\n  - PastellActionMapper.resolveTargetStatus('annulee') → StatutReservation.ANNULEE\n  - La réservation passe de CONFIRMEE à ANNULEE"
+      }
+    },
+    {
+      "name": "📰 9. Journal Pastell — toutes les transitions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Nombre d\\'entrées dans le journal :', json.length);",
+              "json.forEach(e => console.log(`  idJ=${e.id_j} | idD=${e.id_d} | action=${e.action} | date=${e.date}`));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "auth": {
+          "type": "basic",
+          "basic": [
+            { "key": "username", "value": "{{mock_user}}" },
+            { "key": "password", "value": "{{mock_pass}}" }
+          ]
+        },
+        "url": {
+          "raw": "{{mock_url}}/api/v2/journal?since_id_j=0",
+          "host": ["{{mock_url}}"],
+          "path": ["api", "v2", "journal"],
+          "query": [
+            { "key": "since_id_j", "value": "0" }
+          ]
+        },
+        "description": "Lit l'intégralité du journal depuis le début.\n\nVous devriez voir une entrée par action effectuée :\n  idJ=1 | action=creation\n  idJ=2 | action=en-attente-validation\n  idJ=3 | action=validee\n  idJ=4 | action=confirmee\n  idJ=5 | action=terminee   (ou annulee)\n\nC'est exactement ce que Sejour va consommer au prochain tick du polling.\nLe curseur Sejour (pastell_polling_cursor) avancera au max idJ après le poll."
+      }
+    },
+    {
+      "name": "🔄 10. Forcer un poll manuel (Sejour admin) — OPTIONNEL",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{sejour_url}}/api/admin/pastell/poll",
+          "host": ["{{sejour_url}}"],
+          "path": ["api", "admin", "pastell", "poll"]
+        },
+        "description": "Déclenche immédiatement un tick de polling sans attendre les 30 secondes.\n\n⚠️ Cet endpoint n'est PAS encore implémenté dans le Lot 5 (c'est prévu au Lot 6).\nPour l'instant, deux options :\n  A) Attendre 30 secondes que le scheduler tourne\n  B) Ajouter temporairement cet endpoint dans AdminUserController :\n\n  @PostMapping(\"/pastell/poll\")\n  public ResponseEntity<Integer> forcePoll() {\n      int count = inboundSyncService.runPollOnce();\n      return ResponseEntity.ok(count);\n  }\n\nSi vous attendez les 30s, passez directement à la requête 11."
+      }
+    },
+    {
+      "name": "✅ 11. Vérifier la réservation Sejour après le poll",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "console.log('Statut Sejour après poll :', json.statut);",
+              "console.log('Code confirmation :', json.codeConfirmation);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{sejour_url}}/api/client/reservations/{{reservation_id}}",
+          "host": ["{{sejour_url}}"],
+          "path": ["api", "client", "reservations", "{{reservation_id}}"]
+        },
+        "description": "Lit la réservation côté Sejour pour vérifier que le statut a bien basculé.\n\nAprès un poll réussi avec action='terminee' :\n  → statut = TERMINEE\n\nAprès un poll réussi avec action='annulee' :\n  → statut = ANNULEE\n\nSi le statut est encore CONFIRMEE : le poll n'a pas encore tourné.\nAttendez 30s et relancez."
+      }
+    },
+    {
+      "name": "🔍 12. Vérifier le PastellSync après le poll",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{sejour_url}}/api/admin/pastell-sync/reservation/{{reservation_id}}",
+          "host": ["{{sejour_url}}"],
+          "path": ["api", "admin", "pastell-sync", "reservation", "{{reservation_id}}"]
+        },
+        "description": "Vérifie l'état du PastellSync après le poll.\n\nValeurs attendues :\n  - syncStatus = OK\n  - pastellEtatDernierConnu = 'terminee' (ou 'annulee')\n  - derniereSynchro = timestamp récent\n\nSi syncStatus = DIVERGENCE, une incohérence métier a été détectée\n(ex: 'annulee' reçu alors que Sejour était déjà TERMINEE)."
+      }
+    },
+    {
+      "name": "🗄️ 13. Curseur de polling (table pastell_polling_cursor)",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{sejour_url}}/api/admin/pastell/cursor",
+          "host": ["{{sejour_url}}"],
+          "path": ["api", "admin", "pastell", "cursor"]
+        },
+        "description": "Lit l'état du curseur de polling.\n\n⚠️ Cet endpoint n'est pas encore implémenté (Lot 6).\nAlternative : requête SQL directe :\n  SELECT * FROM pastell_polling_cursor WHERE id = 1;\n\nValeurs attendues après un poll complet :\n  - last_processed_id_j = dernier idJ vu dans le journal\n  - last_polled_at = timestamp du dernier poll réussi"
+      }
+    }
+  ]
+}
