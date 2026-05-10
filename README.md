@@ -1,172 +1,165 @@
-# Application Web « Réservation Hôtel »
+# SpringHotel
 
-## 1. Contexte et objectif
+Plateforme de réservation hôtelière sur Montpellier et sa région, avec une intégration Pastell pour la dématérialisation des dossiers de réservation.
 
-#### Créer une application web de réservation hôtelière permettant à des clients de :
+Stack : Spring Boot 4.0, Java 21, React 18, Tailwind CSS, PostgreSQL, Flyway.
 
-● consulter la liste des hôtels disponibles,
-● rechercher un hôtel selon différents critères (localisation, prix, notation,
-équipements…),
-● visualiser la position des hôtels sur une carte interactive,
-● réserver une chambre pour une période donnée,
-● être notifié ou placé en liste d’attente si aucune chambre n’est disponible à la date
-souhaitée.
+## Pourquoi ce projet
 
-#### L’application doit aussi permettre à un administrateur de gérer :
+SpringHotel est mon projet portfolio. Je l'ai construit pour démontrer une capacité à concevoir, structurer et faire évoluer une application full-stack non triviale, et pour préparer ma candidature au poste de DevRel chez Libriciel SCOP. C'est pour cette raison que j'y ai intégré Pastell, le produit phare de Libriciel : pour montrer que je sais lire une API, l'instrumenter, la documenter, et construire des partenaires d'intégration robustes autour.
 
-● les hôtels (création, modification, suppression),
-● les chambres et leurs disponibilités,
-● les réservations et les comptes clients.
+## Ce que l'application fait aujourd'hui
 
-# SpringHotel - Plateforme de réservation hôtelière
+Trois profils d'utilisateurs cohabitent.
 
-> Stack : **Spring Boot 4.0 · Java 25 · React 18 · Tailwind CSS · MySQL · Flyway**
- 
----
+Un visiteur peut consulter la liste des hôtels disponibles, les filtrer par prix, catégorie, équipements, les voir sur une carte interactive Leaflet centrée sur Montpellier, et accéder au détail de chaque chambre.
 
-## Vision du projet
+Un client connecté peut réserver une chambre pour une période donnée, recevoir un mail de confirmation, consulter l'historique de ses réservations, et les annuler.
 
-SpringHotel est une application full-stack de gestion et de réservation hôtelière pensée autour de **Montpellier et sa région**.  
-Elle cible trois profils d'utilisateurs simultanément :
+Un administrateur peut gérer les hôtels, chambres et utilisateurs via une API sécurisée.
 
-| Profil | Ce qu'il peut faire |
-|--------|---------------------|
-| **Visiteur** | Rechercher, filtrer, consulter les hôtels et leurs chambres |
-| **Client connecté** | Réserver, consulter et annuler ses réservations |
-| **Administrateur** | Gérer les hôtels, chambres et utilisateurs via API sécurisée |
- 
----
+L'intégration Pastell, ajoutée par lots successifs, permet à chaque création de réservation de générer automatiquement un dossier dématérialisé côté Pastell, et inversement, de répercuter en temps quasi-réel sur la réservation Sejour les actions effectuées par un agent dans Pastell (validation, annulation, terminaison).
 
-## Architecture globale
+## Architecture du dépôt
 
 ```
 springhotel/
-├── backend/                    ← Spring Boot (API REST)
-│   └── src/main/java/
-│       └── com/example/springhotel/
-│           ├── entity/         ← Modèle JPA (Hotel, Chambre, Reservation, Users…)
-│           ├── controller/     ← REST Controllers (points d'entrée HTTP)
-│           ├── service/        ← Logique métier
-│           ├── repository/     ← Requêtes JPA / base de données
-│           └── dto/            ← Objets de transfert (entrée/sortie API)
+├── back-end/
+│   ├── sejour-backend/     application Spring Boot principale (port 8080)
+│   └── pastell-mock/       mock Pastell pour développement local (port 8090)
 │
-├── front-end/                  ← React + Vite
-│   └── src/
-│       ├── Pages/              ← Vues principales (HomePage, DetailsPage…)
-│       ├── components/         ← Composants réutilisables
-│       ├── hooks/              ← Logique métier côté client (useHotelSearch…)
-│       └── services/           ← Appels API (reservationService…)
+├── front-end/              React + Vite (port 5173)
 │
-└── README.md                   ← Ce fichier
-```
- 
----
-
-## Flux de données — comment tout s'emboîte
-
-```
-[Utilisateur]
-     │
-     ▼
-[React Frontend]  →  fetch / axios  →  [Spring Security]
-                                              │
-                                        Authentification
-                                              │
-                                    [REST Controllers]
-                                              │
-                                       [Services]
-                                              │
-                                    [Repositories JPA]
-                                              │
-                                          [MySQL]
+└── dashboard/              dashboard HTML pour visualiser le flux Sejour ↔ Pastell
 ```
 
-**Règle clé :** le front ne parle jamais directement à la base.  
-Tout passe par l'API REST exposée sur `http://localhost:8080`.
- 
----
+Le projet est organisé en multi-module Maven. Le module `pastell-mock` reproduit fidèlement le comportement de l'API Pastell réelle pour permettre un développement local et des tests d'intégration sans dépendance externe.
 
 ## Démarrage rapide
 
-### Backend
+### Prérequis
+
+Java 21, Node 18+, PostgreSQL 17, Maven 3.9+.
+
+Une base PostgreSQL nommée `hotel_db` doit exister localement. Pour la créer :
+
 ```bash
-# Prérequis : Java 25, MySQL en local
-cd backend
-./mvnw spring-boot:run
-# API disponible sur http://localhost:8080
+psql -U postgres -h localhost
+CREATE DATABASE hotel_db;
+\q
 ```
 
-### Frontend
+Flyway s'occupera de créer toutes les tables au premier démarrage.
+
+### Configuration des variables d'environnement
+
+Copie les fichiers d'exemple dans chaque module :
+
+```bash
+cp back-end/sejour-backend/.env.example back-end/sejour-backend/.env
+cp back-end/pastell-mock/.env.example back-end/pastell-mock/.env
+cp front-end/.env.example front-end/.env
+```
+
+Édite chaque `.env` pour mettre tes valeurs locales (mot de passe Postgres, app password Gmail, etc.). Les `.env` ne sont pas commités, ils restent strictement locaux.
+
+### Lancer le mock Pastell
+
+```bash
+cd back-end/pastell-mock
+./mvnw spring-boot:run
+```
+
+Le mock écoute sur le port 8090.
+
+### Lancer le backend principal
+
+```bash
+cd back-end/sejour-backend
+./mvnw spring-boot:run
+```
+
+L'API est disponible sur `http://localhost:8080`.
+
+### Lancer le frontend React
+
 ```bash
 cd front-end
 npm install
 npm run dev
-# App disponible sur http://localhost:5173
 ```
 
-### Variables d'environnement (`.env`)
-```env
-VITE_API_URL=http://localhost:8080
+L'application est disponible sur `http://localhost:5173`.
+
+### Lancer le dashboard de démo
+
+```bash
+cd dashboard
+python -m http.server 5500
 ```
- 
----
 
-## Fonctionnalités implémentées
+Ouvre `http://localhost:5500` pour voir la visualisation en temps réel du flux entre Sejour et Pastell.
 
-- [x] Recherche d'hôtels par ville, dates, capacité
-- [x] Filtres combinables : prix, catégorie (étoiles), équipements
-- [x] Tri par prix, note, nom
-- [x] Vue carte interactive (Leaflet / OpenStreetMap) avec marqueurs GPS
-- [x] Page détail hôtel avec slider d'images
-- [x] Liste des chambres par hôtel
-- [x] Système de réservation (authentification requise)
-- [x] Espace client : mes réservations, annulation
-- [x] Panel admin : gestion users, hôtels, chambres
-- [x] Emails de confirmation (spring-boot-mail)
-- [x] Migrations BDD versionnées (Flyway)
-## Ce qui arrive
+## L'intégration Pastell en bref
 
-- [ ] JWT stateless (remplace la session actuelle)
-- [ ] Swagger UI / OpenAPI 3 sur `/swagger-ui`
-- [ ] Recherche géospatiale (Haversine — rayon en km)
-- [ ] Export PDF de confirmation de réservation
-- [ ] Moteur de recommandation basé sur l'historique
----
+L'intégration a été développée par lots successifs (5 lots à ce jour), chacun ciblant une dimension précise.
+
+Le **lot 1** a posé l'architecture multi-module Maven et la séparation claire entre Sejour et le mock Pastell.
+
+Le **lot 2** a construit le mock Pastell qui implémente fidèlement les endpoints `/api/v2/document` et `/api/v2/journal`, avec un workflow d'états et un système d'authentification HTTP Basic.
+
+Le **lot 3** a câblé la synchronisation montante : à chaque création de réservation côté Sejour, un dossier est automatiquement créé côté Pastell.
+
+Le **lot 4** a ajouté un système de retry à deux niveaux pour rendre la synchronisation montante robuste face aux pannes temporaires de Pastell. Premier niveau de retry court immédiat, deuxième niveau de reprise différée par scheduler.
+
+Le **lot 5** a fermé la boucle avec la synchronisation descendante : Sejour interroge le journal Pastell toutes les 30 secondes pour détecter les actions effectuées par un agent dans Pastell et les répercuter sur les réservations.
+
+La documentation technique de chaque lot se trouve dans le code, à proximité des fichiers concernés. Pour les lots 4 et 5, voir respectivement `back-end/sejour-backend/src/main/java/com/example/springhotel/integration/pastell/RETRY.md` et `POLLING.md`.
 
 ## Conventions de développement
 
-- **Backend :** un Controller ne parle jamais au Repository directement — il passe toujours par un Service (sauf `HotelController` en cours de refactoring).
-- **Frontend :** la logique d'appel API vit dans `/hooks` ou `/services`, jamais directement dans un composant Page.
-- **Nommage :** français pour les variables métier (`prixMoyenNuit`, `dateDebut`), anglais pour les utilitaires techniques (`handleSubmit`, `loading`).
----
+Côté backend, un Controller ne parle jamais directement à un Repository. Toute logique passe par une couche Service. La seule exception qui demeure est `HotelController`, qui est un héritage des premiers sprints et est en cours de refactorisation.
 
-*Voir les READMEs dans chaque sous-dossier pour le détail de chaque couche.*
+Côté frontend, les appels API ne se font jamais directement dans un composant Page. Ils passent par des fonctions exposées dans `services/` ou par des hooks personnalisés dans `hooks/`.
 
-### Technologies cibles : Frontend React, Backend Java Spring Boot, Base de données relationnelle (PostgreSQL ou MySQL).
+Côté nommage, les variables métier sont en français (`prixMoyenNuit`, `dateDebut`, `nombrePersonnes`) parce que ce sont des concepts du domaine. Les utilitaires techniques restent en anglais (`handleSubmit`, `loading`, `useEffect`).
 
-2. Suivi du projet
+Côté commits, j'utilise les conventional commits avec une portée explicite : `feat(pastell): ...`, `fix(frontend): ...`, `docs(readme): ...`.
 
-[Pour plus de d'étail sur notre projet à Mohamed et Malik](https://docs.google.com/document/d/1Lh5e2OUFWu4cGZceroKN7-JqxY0jcAA2zcEmHkMi7PE/edit?tab=t.0)
+## État actuel et prochaines étapes
 
-Nous avons commencé par analyser le cahier des charges, puis créé un tableau de bord sur [Trello](https://trello.com/b/9Iz00TDD/projet-hotel)
-pour centraliser nos idées, nos tâches et le suivi de l’avancement.
+Ce qui fonctionne aujourd'hui :
 
-Ensuite, nous avons réalisé plusieurs [diagrammes UML](https://drive.google.com/file/d/1azgBVfcXhUdf6qLXU8zJQ5138nK52xJ-/view?ts=69120c94) afin de mieux comprendre la structure du projet, avant de démarrer une [maquette sur Figma](https://www.figma.com/site/0BG3Y7PA3CXIIbPyeyrKhX/Projet-Hotel?node-id=0-1&p=f&t=umikHzEYExZ32Sie-0)
-pour visualiser l’interface utilisateur.
+* recherche d'hôtels par ville, dates, capacité ;
+* filtres combinables prix, catégorie, équipements ;
+* tri par prix, note, nom ;
+* vue carte interactive Leaflet avec marqueurs GPS ;
+* page détail hôtel avec slider d'images ;
+* système de réservation complet ;
+* espace client pour gérer ses réservations ;
+* panel admin pour les utilisateurs, hôtels, chambres ;
+* emails de confirmation via spring-boot-mail ;
+* migrations versionnées Flyway ;
+* intégration Pastell bidirectionnelle complète (5 lots).
 
-3. Démarrage du projet (10/11/2025)
+Ce qui est en cours ou prévu :
 
-Le projet est développé en deux parties :
+* lot 6 d'observabilité avec Micrometer et un dashboard métriques ;
+* migration de l'authentification de session vers JWT stateless ;
+* documentation OpenAPI 3 / Swagger UI ;
+* recherche géospatiale par rayon en kilomètres ;
+* tests unitaires et d'intégration plus larges.
 
-Frontend : initialisé avec React.js → [Documentation officielle](https://react.dev/learn/creating-a-react-app)
+## Ressources liées
 
-Style : configuré avec TailwindCSS → [Guide d’installation](https://tailwindcss.com/docs/installation/using-vite)
+* Suivi du projet : [Trello](https://trello.com/b/9Iz00TDD/projet-hotel)
+* Diagrammes UML : [Drive](https://drive.google.com/file/d/1azgBVfcXhUdf6qLXU8zJQ5138nK52xJ-/view)
+* Maquettes : [Figma](https://www.figma.com/site/0BG3Y7PA3CXIIbPyeyrKhX/Projet-Hotel)
+* Document de cadrage : [Doc Mohamed et Malik](https://docs.google.com/document/d/1Lh5e2OUFWu4cGZceroKN7-JqxY0jcAA2zcEmHkMi7PE/edit)
 
-Backend : lancé avec Spring Boot → [Documentation officielle](https://start.spring.io/)
+## Contributeurs
 
-Nous avons donc démarré le projet avec React pour le front-end et Spring Boot pour le back-end, en mettant en place les bases de l’architecture et du design.
+* [Mohamed Benchrif](https://github.com/azerkane44)
+* [Malik Ibo](https://github.com/Malik971)
 
-Les contributeurs:
-
-[Mohamed Benchrif](https://github.com/azerkane44)
-[Malik Ibo](https://github.com/Malik971)
+Voir les README spécifiques dans chaque sous-dossier pour le détail de chaque couche.
