@@ -1,7 +1,7 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <!--
+  <head>
+    <!--
     ============================================================
     META & POLICES
     ============================================================
@@ -9,18 +9,18 @@
     viewport pour que la page soit utilisable sur mobile.
     Les polices sont chargees depuis Google Fonts (CDN).
   -->
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SpringHotel & Pastell - Démo flux</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpringHotel & Pastell - Démo flux</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Serif+Display:ital@0;1&display=swap"
-    rel="stylesheet"
-  >
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Serif+Display:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
 
-  <!--
+    <!--
     ============================================================
     FEUILLES DE STYLE
     ============================================================
@@ -31,23 +31,32 @@
     L'ordre compte parce que layout et components utilisent
     les variables CSS definies dans variables.css.
   -->
-  <link rel="stylesheet" href="assets/css/variables.css">
-  <link rel="stylesheet" href="assets/css/layout.css">
-  <link rel="stylesheet" href="assets/css/components.css">
-</head>
-<body>
+    <link rel="stylesheet" href="assets/css/variables.css" />
+    <link rel="stylesheet" href="assets/css/layout.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+  </head>
+  <body>
+    <script>
+      window.SPRINGHOTEL_CONFIG = {
+        backendUrl: "https://projethotel-management.onrender.com",
+        mockUrl: "https://springhotel-pastell-mock.onrender.com",
+      };
+    </script>
 
-  <!--
+    <!--
     ============================================================
     HEADER : titre + sous-titre
     ============================================================
   -->
-  <header>
-    <h1>SpringHotel × Pastell</h1>
-    <div class="subtitle">Visualisation du flux bidirectionnel — Lot 5</div>
-  </header>
+    <header>
+      <h1>SpringHotel × Pastell</h1>
+      <div class="subtitle">Visualisation du flux bidirectionnel — Lot 5</div>
+      <a href="status.html" class="subtitle" style="margin-left: auto"
+        >→ Page de status temps reel</a
+      >
+    </header>
 
-  <!--
+    <!--
     ============================================================
     BARRE DE CONFIGURATION
     ============================================================
@@ -55,27 +64,37 @@
     sans editer le code. Pratique pour pointer vers un autre
     backend (par exemple un environnement de staging).
   -->
-  <section class="config-bar" aria-label="Configuration des serveurs">
-    <label>
-      Backend Sejour
-      <input id="cfg-sejour" value="http://localhost:8080" placeholder="http://localhost:8080">
-    </label>
-    <label>
-      Pastell Mock
-      <input id="cfg-mock" value="http://localhost:8090" placeholder="http://localhost:8090">
-    </label>
-    <label>
-      Mock login
-      <input id="cfg-user" value="sejour">
-    </label>
-    <label>
-      Mock password
-      <input id="cfg-pass" value="sejour-mock-pwd" type="password">
-    </label>
-    <button class="btn primary" id="btn-refresh-all">↻ Rafraîchir tout</button>
-  </section>
+    <section class="config-bar" aria-label="Configuration des serveurs">
+      <label>
+        Backend Sejour
+        <input
+          id="cfg-sejour"
+          value="http://localhost:8080"
+          placeholder="http://localhost:8080"
+        />
+      </label>
+      <label>
+        Pastell Mock
+        <input
+          id="cfg-mock"
+          value="http://localhost:8090"
+          placeholder="http://localhost:8090"
+        />
+      </label>
+      <label>
+        Mock login
+        <input id="cfg-user" value="sejour" />
+      </label>
+      <label>
+        Mock password
+        <input id="cfg-pass" value="sejour-mock-pwd" type="password" />
+      </label>
+      <button class="btn primary" id="btn-refresh-all">
+        ↻ Rafraîchir tout
+      </button>
+    </section>
 
-  <!--
+    <!--
     ============================================================
     DIAGRAMME DE WORKFLOW
     ============================================================
@@ -84,29 +103,29 @@
     classe "active". Les fleches entre les etats s'allument
     progressivement au fur et a mesure de l'avancement.
   -->
-  <nav class="workflow" id="workflow" aria-label="Etats du workflow Pastell">
-    <div class="wf-step">
-      <div class="wf-node" id="wf-creation">Création</div>
-      <div class="wf-arrow" id="arr-1">→</div>
-    </div>
-    <div class="wf-step">
-      <div class="wf-node" id="wf-en-attente-validation">En attente</div>
-      <div class="wf-arrow" id="arr-2">→</div>
-    </div>
-    <div class="wf-step">
-      <div class="wf-node" id="wf-validee">Validée</div>
-      <div class="wf-arrow" id="arr-3">→</div>
-    </div>
-    <div class="wf-step">
-      <div class="wf-node" id="wf-confirmee">Confirmée</div>
-      <div class="wf-arrow" id="arr-4">→</div>
-    </div>
-    <div class="wf-node terminal-ok" id="wf-terminee">Terminée</div>
-    <div class="wf-separator">|</div>
-    <div class="wf-node terminal-cancel" id="wf-annulee">Annulée</div>
-  </nav>
+    <nav class="workflow" id="workflow" aria-label="Etats du workflow Pastell">
+      <div class="wf-step">
+        <div class="wf-node" id="wf-creation">Création</div>
+        <div class="wf-arrow" id="arr-1">→</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node" id="wf-en-attente-validation">En attente</div>
+        <div class="wf-arrow" id="arr-2">→</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node" id="wf-validee">Validée</div>
+        <div class="wf-arrow" id="arr-3">→</div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-node" id="wf-confirmee">Confirmée</div>
+        <div class="wf-arrow" id="arr-4">→</div>
+      </div>
+      <div class="wf-node terminal-ok" id="wf-terminee">Terminée</div>
+      <div class="wf-separator">|</div>
+      <div class="wf-node terminal-cancel" id="wf-annulee">Annulée</div>
+    </nav>
 
-  <!--
+    <!--
     ============================================================
     PANNEAUX PRINCIPAUX (cote Sejour + cote Pastell)
     ============================================================
@@ -114,62 +133,64 @@
     sur Sejour et l'etat sur Pastell. C'est le coeur de la demo :
     on voit immediatement quand les deux sont alignes ou non.
   -->
-  <section class="main-grid">
+    <section class="main-grid">
+      <!-- Panneau gauche : la reservation cote Sejour -->
+      <article class="panel">
+        <header class="panel-header">
+          <div class="panel-title"><span>①</span>Sejour - Réservation</div>
+          <div id="badge-resa" class="badge neutral">—</div>
+        </header>
+        <div class="id-input-row">
+          <label>
+            ID réservation
+            <input id="inp-resa-id" placeholder="ex: 1" />
+          </label>
+          <button class="btn" id="btn-load-resa">Charger</button>
+        </div>
+        <div class="panel-body" id="resa-body">
+          <div class="empty-state">
+            Entrez un ID de réservation et cliquez Charger.
+          </div>
+        </div>
+      </article>
 
-    <!-- Panneau gauche : la reservation cote Sejour -->
-    <article class="panel">
-      <header class="panel-header">
-        <div class="panel-title"><span>①</span>Sejour — Réservation</div>
-        <div id="badge-resa" class="badge neutral">—</div>
-      </header>
-      <div class="id-input-row">
-        <label>
-          ID réservation
-          <input id="inp-resa-id" placeholder="ex: 1">
-        </label>
-        <button class="btn" id="btn-load-resa">Charger</button>
-      </div>
-      <div class="panel-body" id="resa-body">
-        <div class="empty-state">Entrez un ID de réservation et cliquez Charger.</div>
-      </div>
-    </article>
+      <!-- Panneau droit : le dossier cote Pastell-mock -->
+      <article class="panel">
+        <header class="panel-header">
+          <div class="panel-title"><span>②</span>Pastell Mock - Dossier</div>
+          <div id="badge-pastell" class="badge neutral">—</div>
+        </header>
+        <div class="id-input-row">
+          <label>
+            id_d (document Pastell)
+            <input id="inp-idd" placeholder="auto-rempli depuis sync" />
+          </label>
+          <button class="btn" id="btn-load-pastell">Charger</button>
+        </div>
+        <div class="panel-body" id="pastell-body">
+          <div class="empty-state">
+            L'id_d est chargé automatiquement via le PastellSync.
+          </div>
+        </div>
+      </article>
+    </section>
 
-    <!-- Panneau droit : le dossier cote Pastell-mock -->
-    <article class="panel">
-      <header class="panel-header">
-        <div class="panel-title"><span>②</span>Pastell Mock — Dossier</div>
-        <div id="badge-pastell" class="badge neutral">—</div>
-      </header>
-      <div class="id-input-row">
-        <label>
-          id_d (document Pastell)
-          <input id="inp-idd" placeholder="auto-rempli depuis sync">
-        </label>
-        <button class="btn" id="btn-load-pastell">Charger</button>
-      </div>
-      <div class="panel-body" id="pastell-body">
-        <div class="empty-state">L'id_d est chargé automatiquement via le PastellSync.</div>
-      </div>
-    </article>
-
-  </section>
-
-  <!--
+    <!--
     ============================================================
     INDICATEUR DE COHERENCE
     ============================================================
     Affiche si les deux cotes (Sejour et Pastell) sont alignes.
     Cache par defaut, apparait quand les deux panneaux sont charges.
   -->
-  <section class="panel coherence-panel" id="sync-coherence" hidden>
-    <header class="panel-header">
-      <div class="panel-title"><span>⟷</span>Cohérence Sejour ↔ Pastell</div>
-      <div id="badge-coherence" class="badge neutral">—</div>
-    </header>
-    <div class="panel-body" id="coherence-body"></div>
-  </section>
+    <section class="panel coherence-panel" id="sync-coherence" hidden>
+      <header class="panel-header">
+        <div class="panel-title"><span>⟷</span>Cohérence Sejour ↔ Pastell</div>
+        <div id="badge-coherence" class="badge neutral">—</div>
+      </header>
+      <div class="panel-body" id="coherence-body"></div>
+    </section>
 
-  <!--
+    <!--
     ============================================================
     PANNEAU D'ACTIONS PASTELL
     ============================================================
@@ -178,17 +199,23 @@
     Le contenu est genere dynamiquement en JS selon les actions
     disponibles depuis l'etat courant du dossier.
   -->
-  <section class="actions-panel">
-    <header class="panel-header">
-      <div class="panel-title"><span>③</span>Actions Pastell (simule un agent)</div>
-      <span class="badge neutral mini">POST /api/v2/entite/1/document/:id_d/action</span>
-    </header>
-    <div class="actions-grid" id="actions-grid">
-      <div class="empty-state">Chargez un dossier Pastell pour voir les actions disponibles.</div>
-    </div>
-  </section>
+    <section class="actions-panel">
+      <header class="panel-header">
+        <div class="panel-title">
+          <span>③</span>Actions Pastell (simule un agent)
+        </div>
+        <span class="badge neutral mini"
+          >POST /api/v2/entite/1/document/:id_d/action</span
+        >
+      </header>
+      <div class="actions-grid" id="actions-grid">
+        <div class="empty-state">
+          Chargez un dossier Pastell pour voir les actions disponibles.
+        </div>
+      </div>
+    </section>
 
-  <!--
+    <!--
     ============================================================
     JOURNAL PASTELL + CONTROLE DE POLLING
     ============================================================
@@ -196,32 +223,41 @@
     qui reproduit ce que fait le scheduler Sejour cote serveur.
     En bas : la liste des entrees du journal, ordre antechronologique.
   -->
-  <section class="journal-log">
-    <header class="panel-header">
-      <div class="panel-title"><span>④</span>Journal Pastell (GET /api/v2/journal)</div>
-      <button class="btn" id="btn-refresh-journal">↻ Actualiser</button>
-    </header>
-    <div class="poll-bar">
-      <span class="poll-status" id="poll-status">● Poll auto : OFF</span>
-      <button class="btn primary" id="btn-poll-toggle">Démarrer poll auto (30s)</button>
-      <button class="btn" id="btn-poll-now">Forcer rafraîchissement</button>
-      <span id="poll-counter" class="poll-counter"></span>
-    </div>
-    <div id="journal-entries" class="journal-entries">
-      <div class="empty-state">Aucune entrée de journal chargée.</div>
-    </div>
-  </section>
+    <section class="journal-log">
+      <header class="panel-header">
+        <div class="panel-title">
+          <span>④</span>Journal Pastell (GET /api/v2/journal)
+        </div>
+        <button class="btn" id="btn-refresh-journal">↻ Actualiser</button>
+      </header>
+      <div class="poll-bar">
+        <span class="poll-status" id="poll-status">● Poll auto : OFF</span>
+        <button class="btn primary" id="btn-poll-toggle">
+          Démarrer poll auto (30s)
+        </button>
+        <button class="btn" id="btn-poll-now">Forcer rafraîchissement</button>
+        <span id="poll-counter" class="poll-counter"></span>
+      </div>
+      <div id="journal-entries" class="journal-entries">
+        <div class="empty-state">Aucune entrée de journal chargée.</div>
+      </div>
+    </section>
 
-  <!--
+    <!--
     ============================================================
     TOAST D'ERREUR
     ============================================================
     Notification non bloquante en bas a droite quand un appel
     HTTP echoue. Disparait automatiquement apres 4 secondes.
   -->
-  <div class="error-toast" id="error-toast" role="alert" aria-live="polite"></div>
+    <div
+      class="error-toast"
+      id="error-toast"
+      role="alert"
+      aria-live="polite"
+    ></div>
 
-  <!--
+    <!--
     ============================================================
     SCRIPTS JAVASCRIPT
     ============================================================
@@ -238,10 +274,10 @@
       4. ui.js      : fonctions de rendu DOM
       5. main.js    : initialisation et evenements
   -->
-  <script defer src="assets/js/config.js"></script>
-  <script defer src="assets/js/state.js"></script>
-  <script defer src="assets/js/api.js"></script>
-  <script defer src="assets/js/ui.js"></script>
-  <script defer src="assets/js/main.js"></script>
-</body>
+    <script defer src="assets/js/config.js"></script>
+    <script defer src="assets/js/state.js"></script>
+    <script defer src="assets/js/api.js"></script>
+    <script defer src="assets/js/ui.js"></script>
+    <script defer src="assets/js/main.js"></script>
+  </body>
 </html>

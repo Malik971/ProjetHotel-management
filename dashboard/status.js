@@ -6,6 +6,8 @@
  *
  * Structure :
  *   1. Lecture de window.SPRINGHOTEL_CONFIG (defini dans config.js).
+ *      Detection auto local vs prod : en local on tape sur localhost,
+ *      en prod sur les URLs Render.
  *   2. Boucle setInterval qui appelle fetchStatus() toutes les N ms.
  *   3. fetchStatus -> render() qui met a jour le DOM.
  *
@@ -15,8 +17,27 @@
 (() => {
   "use strict";
 
+  /**
+   * Detecte si on tourne en local (file://, localhost) ou en prod.
+   */
+  function isLocalEnvironment() {
+    if (window.location.protocol === 'file:') return true;
+    const hostname = window.location.hostname;
+    return hostname === 'localhost'
+        || hostname === '127.0.0.1'
+        || hostname === '0.0.0.0'
+        || hostname.endsWith('.local');
+  }
+
   const config = window.SPRINGHOTEL_CONFIG || {};
-  const BACKEND_URL = config.backendUrl || "";
+
+  // Choix de l'URL backend selon l'environnement.
+  // En local on tape sur localhost:8080 par defaut, en prod on prend la
+  // valeur fournie dans window.SPRINGHOTEL_CONFIG.backendUrl.
+  const BACKEND_URL = isLocalEnvironment()
+      ? "http://localhost:8080"
+      : (config.backendUrl || "");
+
   const REFRESH_MS = config.statusRefreshIntervalMs || 5000;
   const STATUS_ENDPOINT = BACKEND_URL + "/api/admin/pastell/status";
 

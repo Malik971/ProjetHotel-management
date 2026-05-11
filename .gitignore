@@ -40,3 +40,4 @@ application.properties
 **/.env.local
 !.env.example
 !**/.env.example
+run-local.sh
