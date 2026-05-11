@@ -28,7 +28,7 @@ window.SPRINGHOTEL_CONFIG = {
   // Token envoye sur le header X-Demo-Token pour les operations destructives
   // (typiquement le bouton "forcer un poll" du dashboard).
   // Definir la meme valeur cote Render (variable DEMO_ADMIN_TOKEN).
-  demoAdminToken: "REPLACE_ME_WITH_DEMO_ADMIN_TOKEN",
+  demoAdminToken: "b3d92d3683a75662c00ce072b0274f17",
 
   // Intervalle de rafraichissement de la page status.html (millisecondes).
   statusRefreshIntervalMs: 5000,
