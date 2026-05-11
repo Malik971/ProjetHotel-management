@@ -44,6 +44,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *   La validation utilise isBlank() qui traite "" comme invalide, donc le
  *   comportement est garanti independamment de la cascade de properties.
  *
+ *   Lot 6 : on inclut aussi pastell.master-secret dans la liste des properties
+ *   a vider explicitement. Raison : Spring Boot resout les variables d'environnement
+ *   (PASTELL_MASTER_SECRET) automatiquement, et si un dev a expose cette variable
+ *   dans son shell (pour le mode rotatif), elle serait reprise ici et la
+ *   validation considererait le mode rotatif actif, donc skiperait le check
+ *   username/password. En vidant explicitement master-secret, on force le mode
+ *   statique pour ces tests, ce qui restaure le comportement attendu.
+ *
  * Le test ne devient ainsi sensible qu'aux arguments qu'il passe, pas a
  * l'environnement de l'utilisateur. C'est ce qu'on attend d'un test unitaire.
  */
@@ -56,6 +64,7 @@ class PastellPropertiesValidationTest {
                 "--pastell.url=",                          // explicitement vide
                 "--pastell.username=u",
                 "--pastell.password=p",
+                "--pastell.master-secret=",                // Lot 6 : force le mode statique
                 "--pastell.entite-id=1"
         ))
                 .rootCause()
@@ -70,6 +79,7 @@ class PastellPropertiesValidationTest {
                 "--pastell.url=http://localhost:9999",
                 "--pastell.username=",                     // explicitement vide
                 "--pastell.password=p",
+                "--pastell.master-secret=",                // Lot 6 : force le mode statique
                 "--pastell.entite-id=1"
         ))
                 .rootCause()
@@ -84,6 +94,7 @@ class PastellPropertiesValidationTest {
                 "--pastell.url=http://localhost:9999",
                 "--pastell.username=u",
                 "--pastell.password=",                     // explicitement vide
+                "--pastell.master-secret=",                // Lot 6 : force le mode statique
                 "--pastell.entite-id=1"
         ))
                 .rootCause()
@@ -98,6 +109,7 @@ class PastellPropertiesValidationTest {
                 "--pastell.url=http://localhost:9999",
                 "--pastell.username=u",
                 "--pastell.password=p",
+                "--pastell.master-secret=",                // Lot 6 : force le mode statique
                 "--pastell.entite-id=0"
         ))
                 .rootCause()

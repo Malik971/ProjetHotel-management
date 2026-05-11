@@ -100,7 +100,7 @@ public class DemoRateLimitFilter extends OncePerRequestFilter {
         if (!allowed) {
             log.warn("Rate limit depasse pour IP {} sur {} {} (>{}/{}s).",
                     ip, request.getMethod(), request.getRequestURI(), maxRequests, windowSeconds);
-            response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
+            response.setStatus(429);
             response.setContentType("application/json");
             response.setHeader("Retry-After", String.valueOf(windowSeconds));
             response.getWriter().write(String.format(

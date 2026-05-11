@@ -4,6 +4,7 @@ import com.example.springhotel.integration.pastell.security.PastellCredentialsPr
 import com.example.springhotel.integration.pastell.security.RotatingBasicAuthInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -28,11 +29,22 @@ import java.time.Duration;
  * Cette configuration est CONDITIONNELLE : les beans ne sont crees que si
  * {@code pastell.enabled=true}.
  *
- * Evolution Lot 6 : selection automatique de l'interceptor d'authentification.
- *   - Si {@code pastell.master-secret} est defini, on utilise
+ * Evolution Lot 6 : selection automatique de l'interceptor d'authentification
+ * via le bean {@link PastellCredentialsProvider} declare dans
+ * {@link PastellCredentialsConfig} (classe separee pour eviter une reference
+ * circulaire avec l'injection par champ ci-dessous).
+ *
+ *   - Si le bean est present (mode rotatif, master-secret defini), on utilise
  *     {@link RotatingBasicAuthInterceptor} qui derive le mot de passe a chaque appel.
  *   - Sinon, on retombe sur le comportement legacy : {@link BasicAuthenticationInterceptor}
  *     avec username/password statiques.
+ *
+ * Choix d'injection : le {@code credentialsProvider} est injecte par champ avec
+ * {@code @Autowired(required = false)}. Cela permet :
+ *   - Au runtime Spring : injection automatique si le bean existe, null sinon.
+ *   - Dans les tests qui instancient PastellConfig a la main (Lot 3 et suivants) :
+ *     le champ reste null, la logique se rabat sur l'auth statique, aucun
+ *     changement requis dans les tests existants.
  */
 @Configuration
 @EnableConfigurationProperties(PastellProperties.class)
@@ -47,21 +59,19 @@ public class PastellConfig {
 
     private final PastellProperties properties;
 
+    /**
+     * Provider de credentials rotatifs. Injecte uniquement si le bean est declare
+     * dans {@link PastellCredentialsConfig} (c'est-a-dire en mode rotatif, quand
+     * la propriete {@code pastell.master-secret} est definie).
+     * Reste null en mode statique et dans les tests qui instancient cette classe
+     * a la main sans contexte Spring.
+     */
+    @Autowired(required = false)
+    private PastellCredentialsProvider credentialsProvider;
+
     public PastellConfig(PastellProperties properties) {
         properties.validateIfEnabled();
         this.properties = properties;
-    }
-
-    /**
-     * Bean {@link PastellCredentialsProvider}, declare uniquement en mode rotatif.
-     * Permet aux autres composants (controllers admin, page status) d'afficher
-     * le username courant sans avoir a re-deriver eux-memes.
-     */
-    @Bean
-    @ConditionalOnProperty(name = "pastell.master-secret")
-    public PastellCredentialsProvider pastellCredentialsProvider() {
-        log.info("Mode auth Pastell sortante : ROTATIF (HMAC-SHA256, rotation quotidienne UTC).");
-        return new PastellCredentialsProvider(properties.getMasterSecret());
     }
 
     /**
@@ -69,23 +79,21 @@ public class PastellConfig {
      *
      * Configure avec :
      *   - Base URL
-     *   - Auth Basic : rotative (Lot 6) ou statique (legacy), selon la presence de master-secret
+     *   - Auth Basic : rotative (Lot 6) ou statique (legacy), selon la presence du bean credentials
      *   - Timeouts de connexion et de lecture
      *   - User-Agent identifiable
      *   - Interceptor de logging discret
      */
     @Bean(PASTELL_REST_CLIENT)
-    public RestClient pastellRestClient(
-            org.springframework.beans.factory.ObjectProvider<PastellCredentialsProvider> credentialsProvider) {
+    public RestClient pastellRestClient() {
         log.info("Initialisation du RestClient Pastell (base URL = {}, timeout = {}ms)",
                 properties.getUrl(), properties.getTimeoutMs());
 
         ClientHttpRequestInterceptor authInterceptor;
-        PastellCredentialsProvider provider = credentialsProvider.getIfAvailable();
-        if (provider != null) {
-            authInterceptor = new RotatingBasicAuthInterceptor(provider);
+        if (credentialsProvider != null) {
+            authInterceptor = new RotatingBasicAuthInterceptor(credentialsProvider);
             log.info("Auth interceptor : RotatingBasicAuthInterceptor (username derive = {}).",
-                    provider.getUsername());
+                    credentialsProvider.getUsername());
         } else {
             log.info("Auth interceptor : BasicAuthenticationInterceptor statique (username = {}).",
                     properties.getUsername());
