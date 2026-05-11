@@ -15,9 +15,10 @@ import java.util.Optional;
 /**
  * Repository Spring Data pour l'entite {@link PastellSync}.
  *
- * Les methodes ci-dessous anticipent les besoins des Lots 4 et 5 :
+ * Les methodes ci-dessous anticipent les besoins des Lots 4 a 6 :
  *   - Lot 4 (sync montante) : findByReservationId, existsByReservationId, findAllBySyncStatus
  *   - Lot 5 (sync descendante) : findByPastellDocumentId
+ *   - Lot 6 (observabilite)   : countBySyncStatus
  *
  * Aucune methode ne modifie l'entite Reservation : PastellSync est une
  * "pellicule" au-dessus de la reservation, jamais une source de verite metier.
@@ -49,29 +50,23 @@ public interface PastellSyncRepository extends JpaRepository<PastellSync, Long> 
      * Utilise au Lot 4 par le job de reprise qui retraite les EN_RETRY et EN_ERREUR.
      */
     List<PastellSync> findAllBySyncStatus(SyncStatus syncStatus);
+
+    /**
+     * Compte les syncs dans un statut donne (Lot 6).
+     * Utilise par l'endpoint d'observabilite {@code GET /api/admin/pastell/status}
+     * pour afficher dans le dashboard les compteurs OK / EN_RETRY / DIVERGENCE / EN_ERREUR.
+     *
+     * Plus efficace que findAllBySyncStatus(status).size() : execute un SELECT COUNT
+     * cote base, ne charge aucune entite en memoire.
+     */
+    long countBySyncStatus(SyncStatus syncStatus);
+
     /**
      * Recupere les syncs candidats au retraitement par le scheduler (Lot 4 niveau 2).
      *
      * Selectionne les syncs dans les statuts donnes (typiquement EN_RETRY et PENDING),
      * tries du plus ancien au plus recent (FIFO sur date_creation), avec une limite
      * imposee via Pageable pour ne pas noyer Pastell d'un coup apres une grosse panne.
-     *
-     * Pourquoi un FIFO ?
-     *   - Equite : les syncs qui attendent depuis le plus longtemps passent en
-     *     premier, ils ne sont jamais affames par les nouveaux arrivants.
-     *   - Predictibilite : sous charge, l'admin sait que c'est toujours les plus
-     *     vieux qui vont passer.
-     *
-     * Pourquoi PENDING aussi ?
-     *   - Un PENDING qui traine sans avoir bascule OK ou EN_RETRY est forcement
-     *     orphelin (le serveur a crashe entre la persistance et l'appel HTTP).
-     *   - On le retraite comme un EN_RETRY : le scheduler appellera retraiterSync,
-     *     qui executera l'appel HTTP que le crash avait empeche.
-     *
-     * Pourquoi @Query JPQL plutot que le naming method de Spring Data ?
-     *   - Le nom genere "findTopNBySyncStatusInOrderByDateCreationAsc" est
-     *     correct mais long. Une @Query est plus lisible et plus explicite
-     *     dans son intention.
      *
      * @param statuses statuts a inclure (typiquement {EN_RETRY, PENDING})
      * @param pageable typiquement PageRequest.of(0, schedulerBatchSize)

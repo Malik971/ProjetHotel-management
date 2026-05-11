@@ -1,0 +1,44 @@
+# ============================================================
+# .dockerignore (a placer a la racine du repo)
+# ------------------------------------------------------------
+# Reduit le contexte de build envoye au daemon Docker.
+# Sur Render free tier, c'est aussi du temps gagne sur l'upload du contexte.
+# ============================================================
+
+# Build artifacts
+**/target/
+**/*.class
+**/.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Frontend node_modules (pas necessaire pour le build backend)
+**/node_modules/
+**/dist/
+**/.netlify/
+
+# Git
+.git/
+.gitignore
+
+# Documentation et meta
+*.md
+docs/
+dashboard/
+
+# Tests locaux temporaires
+test-output/
+*.tmp

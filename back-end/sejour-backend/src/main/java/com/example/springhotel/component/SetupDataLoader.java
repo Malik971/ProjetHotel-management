@@ -7,6 +7,8 @@ import com.example.springhotel.repository.PrivilegeRepository;
 import com.example.springhotel.repository.RoleRepository;
 import com.example.springhotel.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
@@ -17,8 +19,27 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Initialise les donnees de base au demarrage de l'application.
+ * <p>
+ * <b>Evolution Lot 6 :</b> ajout du compte demo public {@code demo@springhotel.fr}
+ * pour la mise en ligne. Ce compte est creee uniquement s'il n'existe pas, ce qui
+ * garde le runtime idempotent : on peut redemarrer en toute securite, et un admin
+ * qui modifierait le mot de passe en base ne se le ferait pas ecraser.
+ * <p>
+ * <b>Pourquoi seeder le compte demo ici plutot que dans une migration SQL ?</b>
+ *   <ul>
+ *     <li>BCrypt est natif a Spring Security : on a deja le PasswordEncoder injecte,
+ *         pas besoin de calculer le hash a la main et de le coller en SQL.</li>
+ *     <li>Coherence avec le compte admin {@code test@test.com} qui est deja
+ *         seede ici depuis le Lot 0.</li>
+ *     <li>Idempotence triviale : {@code findByEmail().isEmpty()} suffit.</li>
+ *   </ul>
+ */
 @Component
 public class SetupDataLoader implements ApplicationListener<ApplicationReadyEvent> {
+
+    private static final Logger log = LoggerFactory.getLogger(SetupDataLoader.class);
 
     boolean alreadySetup = false;
 
@@ -40,11 +61,11 @@ public class SetupDataLoader implements ApplicationListener<ApplicationReadyEven
 
         if (alreadySetup) return;
 
-        // Privilèges
+        // Privileges
         Privilege readPrivilege = createPrivilegeIfNotFound("READ_PRIVILEGE");
         Privilege writePrivilege = createPrivilegeIfNotFound("WRITE_PRIVILEGE");
 
-        // Rôles — USER, ADMIN, EMPLOYE
+        // Roles USER, ADMIN, EMPLOYE
         List<Privilege> adminPrivileges = Arrays.asList(readPrivilege, writePrivilege);
         List<Privilege> employePrivileges = Arrays.asList(readPrivilege, writePrivilege);
 
@@ -52,7 +73,7 @@ public class SetupDataLoader implements ApplicationListener<ApplicationReadyEven
         createRoleIfNotFound("ROLE_EMPLOYE", employePrivileges);
         createRoleIfNotFound("ROLE_USER", List.of(readPrivilege));
 
-        // Admin par défaut (à remplacer en prod)
+        // Admin par defaut (a remplacer en prod)
         if (userRepository.findByEmail("test@test.com").isEmpty()) {
             Role adminRole = roleRepository.findByName("ROLE_ADMIN");
             Users users = new Users();
@@ -63,6 +84,21 @@ public class SetupDataLoader implements ApplicationListener<ApplicationReadyEven
             users.setRoles(Arrays.asList(adminRole));
             users.setEnabled(true);
             userRepository.save(users);
+            log.info("SetupDataLoader : compte admin test@test.com cree.");
+        }
+
+        // Lot 6 : compte demo public pour la mise en ligne portfolio
+        if (userRepository.findByEmail("demo@springhotel.fr").isEmpty()) {
+            Role userRole = roleRepository.findByName("ROLE_USER");
+            Users demo = new Users();
+            demo.setFirstName("Demo");
+            demo.setLastName("SpringHotel");
+            demo.setPassword(passwordEncoder.encode("Malik971*"));
+            demo.setEmail("demo@springhotel.fr");
+            demo.setRoles(Arrays.asList(userRole));
+            demo.setEnabled(true);
+            userRepository.save(demo);
+            log.info("SetupDataLoader : compte demo demo@springhotel.fr cree.");
         }
 
         alreadySetup = true;

@@ -1,74 +1,96 @@
 package com.example.springhotel.controller;
 
+import com.example.springhotel.dto.PastellStatusDTO;
 import com.example.springhotel.dto.ReservationResponseDTO;
 import com.example.springhotel.entity.Reservation;
+import com.example.springhotel.integration.pastell.config.PastellProperties;
 import com.example.springhotel.integration.pastell.entity.PastellPollingCursor;
 import com.example.springhotel.integration.pastell.entity.PastellSync;
+import com.example.springhotel.integration.pastell.entity.SyncStatus;
 import com.example.springhotel.integration.pastell.repository.PastellPollingCursorRepository;
 import com.example.springhotel.integration.pastell.repository.PastellSyncRepository;
 import com.example.springhotel.integration.pastell.service.PastellInboundSyncService;
 import com.example.springhotel.repository.ReservationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Controller admin pour la demonstration et le diagnostic de l'integration Pastell.
- *<p>
- * Expose des endpoints simples qui contournent l'authentification utilisateur
- * (presents sous /api/admin/** qui est en permitAll() dans SecurityConfig).
- * Sert principalement au dashboard de demo HTML pour :
- *   - Lire une reservation par ID sans avoir besoin d'etre connecte
- *   - Decouvrir le pastellDocumentId associe a une reservation
- *   - Inspecter le curseur de polling
- *   - Forcer un poll manuel sans attendre les 30 secondes du scheduler
- *<p>
- * Pourquoi ces endpoints ne sont pas dans les controllers existants :
- *   - ClientReservationController exige une auth (Authentication parameter), il
- *     n'est pas adapte pour un dashboard de demo qui tourne sans login.
- *   - On garde la separation : les controllers metier protegent leurs endpoints,
- *     les controllers admin/debug exposent une API simplifiee.
- *<p>
- * Pourquoi ObjectProvider<PastellInboundSyncService> :
- *   - Le service est conditionnel (@ConditionalOnProperty pastell.enabled=true).
- *     Si Pastell est desactive, le bean n'existe pas et un Autowired direct
- *     ferait planter le demarrage. ObjectProvider permet une injection optionnelle :
- *     on l'utilise si present, on retourne 503 si absent.
- *<p>
- * Securite : ces endpoints sont publics par construction. C'est ACCEPTABLE pour
- * le portfolio et la demo locale, ce le serait MOINS pour la production. En prod,
- * ce controller serait protege par hasRole("ADMIN") et /api/admin/** ne serait
- * plus en permitAll().
+ * <p>
+ * <b>Evolution Lot 6 :</b>
+ *   <ul>
+ *     <li>Ajout de {@code GET /api/admin/pastell/status} qui retourne un snapshot
+ *         de l'integration (compteurs, curseur, ping mock). Consomme par le dashboard
+ *         et la page status.html.</li>
+ *     <li>Le endpoint {@code POST /api/admin/pastell/poll} exige maintenant un header
+ *         {@code X-Demo-Token} qui doit matcher la propriete {@code demo.admin-token}.
+ *         Cette protection est legere (le token est connu du JS du dashboard) mais
+ *         suffit a empecher le bruit de bots aveugles. Voir DEMO_PUBLIQUE.md.</li>
+ *   </ul>
+ * <p>
+ * Endpoints publics par construction (under /api/admin/** en permitAll dans SecurityConfig).
+ * C'est acceptable pour le portfolio et la demo. Pour une vraie prod, ce controller
+ * serait protege par hasRole("ADMIN") et /api/admin/** ne serait plus en permitAll.
  */
 @RestController
 @RequestMapping("/api/admin")
 @CrossOrigin(origins = "*")
 public class AdminPastellController {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminPastellController.class);
+
     private final ReservationRepository reservationRepository;
     private final PastellSyncRepository pastellSyncRepository;
     private final PastellPollingCursorRepository cursorRepository;
     private final ObjectProvider<PastellInboundSyncService> inboundSyncServiceProvider;
+    private final ObjectProvider<PastellProperties> pastellPropertiesProvider;
+
+    /**
+     * Token attendu sur l'entete {@code X-Demo-Token} pour les operations
+     * destructives. Vide en local (dev), defini en prod (variable d'env
+     * {@code DEMO_ADMIN_TOKEN}). Si vide, la verification est court-circuitee.
+     */
+    @Value("${demo.admin-token:}")
+    private String demoAdminToken;
+
+    /**
+     * Client HTTP a la JDK pour le ping du mock. Pas de RestClient, pas de
+     * dependance sur PastellConfig (ce controller doit tourner meme si Pastell
+     * est desactive, par exemple en cas de panne du mock).
+     */
+    private final HttpClient pingClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(2))
+            .build();
 
     public AdminPastellController(
             ReservationRepository reservationRepository,
             PastellSyncRepository pastellSyncRepository,
             PastellPollingCursorRepository cursorRepository,
-            ObjectProvider<PastellInboundSyncService> inboundSyncServiceProvider) {
+            ObjectProvider<PastellInboundSyncService> inboundSyncServiceProvider,
+            ObjectProvider<PastellProperties> pastellPropertiesProvider) {
         this.reservationRepository = reservationRepository;
         this.pastellSyncRepository = pastellSyncRepository;
         this.cursorRepository = cursorRepository;
         this.inboundSyncServiceProvider = inboundSyncServiceProvider;
+        this.pastellPropertiesProvider = pastellPropertiesProvider;
     }
 
     /**
      * Lit une reservation par son ID, sans authentification.
-     * Equivalent simplifie de ClientReservationController.getReservationById().
      */
     @GetMapping("/reservations/{id}")
     public ResponseEntity<ReservationResponseDTO> getReservation(@PathVariable Long id) {
@@ -79,8 +101,7 @@ public class AdminPastellController {
     }
 
     /**
-     * Lit le PastellSync associe a une reservation. Utilise par le dashboard
-     * pour auto-decouvrir le pastellDocumentId.
+     * Lit le PastellSync associe a une reservation.
      */
     @GetMapping("/pastell-sync/reservation/{reservationId}")
     public ResponseEntity<PastellSync> getPastellSyncByReservation(@PathVariable Long reservationId) {
@@ -101,14 +122,20 @@ public class AdminPastellController {
 
     /**
      * Force un tick de polling sans attendre les 30 secondes du scheduler.
-     * Pratique pour la demo : on declenche manuellement la synchronisation
-     * descendante apres avoir change un etat dans Pastell.
-     *<p>
-     * Retourne le nombre d'entrees traitees + un timestamp.
-     * Si Pastell est desactive (pastell.enabled=false), retourne 503.
+     * Protege par X-Demo-Token (Lot 6). Si le token n'est pas configure, accepte.
      */
     @PostMapping("/pastell/poll")
-    public ResponseEntity<Map<String, Object>> forcePoll() {
+    public ResponseEntity<Map<String, Object>> forcePoll(
+            @RequestHeader(value = "X-Demo-Token", required = false) String providedToken) {
+
+        if (!isDemoTokenValid(providedToken)) {
+            log.warn("forcePoll : X-Demo-Token absent ou invalide.");
+            Map<String, Object> body = new HashMap<>();
+            body.put("error", "forbidden");
+            body.put("hint", "Header X-Demo-Token requis pour cette operation.");
+            return ResponseEntity.status(403).body(body);
+        }
+
         PastellInboundSyncService service = inboundSyncServiceProvider.getIfAvailable();
         if (service == null) {
             Map<String, Object> body = new HashMap<>();
@@ -123,9 +150,85 @@ public class AdminPastellController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Snapshot de l'integration Pastell, Lot 6.
+     * Endpoint public (pas de token requis), consomme par le dashboard et status.html.
+     */
+    @GetMapping("/pastell/status")
+    public ResponseEntity<PastellStatusDTO> getStatus() {
+        PastellProperties props = pastellPropertiesProvider.getIfAvailable();
+        boolean enabled = props != null && props.isEnabled();
+
+        PastellStatusDTO.PastellStatusDTOBuilder builder = PastellStatusDTO.builder()
+                .generatedAt(LocalDateTime.now())
+                .pastellEnabled(enabled)
+                .syncCountOk(pastellSyncRepository.countBySyncStatus(SyncStatus.OK))
+                .syncCountPending(pastellSyncRepository.countBySyncStatus(SyncStatus.PENDING))
+                .syncCountEnRetry(pastellSyncRepository.countBySyncStatus(SyncStatus.EN_RETRY))
+                .syncCountEnErreur(pastellSyncRepository.countBySyncStatus(SyncStatus.EN_ERREUR))
+                .syncCountDivergence(pastellSyncRepository.countBySyncStatus(SyncStatus.DIVERGENCE))
+                .reservationCount(reservationRepository.count());
+
+        cursorRepository.findCursor().ifPresent(cursor -> {
+            builder.lastProcessedIdJ(cursor.getLastProcessedIdJ());
+            builder.lastPolledAt(cursor.getLastPolledAt());
+        });
+
+        builder.mockHealth(pingMock(props));
+
+        return ResponseEntity.ok(builder.build());
+    }
+
+    /**
+     * Ping HTTP du mock Pastell. Retourne un MockHealth synthese.
+     */
+    private PastellStatusDTO.MockHealth pingMock(PastellProperties props) {
+        if (props == null || !props.isEnabled() || props.getUrl() == null) {
+            return PastellStatusDTO.MockHealth.builder()
+                    .reachable(false)
+                    .errorMessage("Pastell desactive ou URL absente")
+                    .build();
+        }
+        // Endpoint version.php : anonyme cote mock, ideal pour un ping sans credentials.
+        String pingUrl = props.getUrl() + "/api/version.php";
+        long start = System.nanoTime();
+        try {
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(pingUrl))
+                    .timeout(Duration.ofSeconds(2))
+                    .GET()
+                    .build();
+            HttpResponse<Void> resp = pingClient.send(req, HttpResponse.BodyHandlers.discarding());
+            long elapsed = Duration.ofNanos(System.nanoTime() - start).toMillis();
+            return PastellStatusDTO.MockHealth.builder()
+                    .reachable(resp.statusCode() >= 200 && resp.statusCode() < 300)
+                    .responseTimeMs(elapsed)
+                    .errorMessage(resp.statusCode() >= 300 ? "HTTP " + resp.statusCode() : null)
+                    .build();
+        } catch (Exception e) {
+            long elapsed = Duration.ofNanos(System.nanoTime() - start).toMillis();
+            return PastellStatusDTO.MockHealth.builder()
+                    .reachable(false)
+                    .responseTimeMs(elapsed)
+                    .errorMessage(e.getClass().getSimpleName() + ": " + e.getMessage())
+                    .build();
+        }
+    }
+
+    /**
+     * Verifie le X-Demo-Token. Si la propriete demo.admin-token est vide,
+     * la verification est court-circuitee (dev local). En prod, la propriete
+     * est obligatoirement renseignee.
+     */
+    private boolean isDemoTokenValid(String providedToken) {
+        if (demoAdminToken == null || demoAdminToken.isBlank()) {
+            return true;
+        }
+        return demoAdminToken.equals(providedToken);
+    }
+
     // ============================================================
-    // Conversion DTO (copie minimale de ClientReservationController.convertToDTO,
-    // sans la dependance a Authentication)
+    // Conversion DTO (copie minimale, sans la dependance a Authentication)
     // ============================================================
 
     private ReservationResponseDTO toDto(Reservation reservation) {

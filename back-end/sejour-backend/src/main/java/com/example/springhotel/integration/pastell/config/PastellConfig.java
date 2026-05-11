@@ -1,5 +1,7 @@
 package com.example.springhotel.integration.pastell.config;
 
+import com.example.springhotel.integration.pastell.security.PastellCredentialsProvider;
+import com.example.springhotel.integration.pastell.security.RotatingBasicAuthInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -24,13 +26,13 @@ import java.time.Duration;
  * Configuration Spring de l'integration Pastell.
  *
  * Cette configuration est CONDITIONNELLE : les beans ne sont crees que si
- * {@code pastell.enabled=true}. Quand l'integration est desactivee (defaut),
- * aucun bean Pastell n'est present dans le contexte, ce qui empeche toute
- * injection accidentelle et rend la fonctionnalite totalement invisible.
+ * {@code pastell.enabled=true}.
  *
- * DevRel note : ce pattern "ConditionalOnProperty" est recommande pour toute
- * integration optionnelle. Il permet a un partenaire de builder l'application
- * sans avoir encore de Pastell, et d'activer la fonctionnalite quand il est pret.
+ * Evolution Lot 6 : selection automatique de l'interceptor d'authentification.
+ *   - Si {@code pastell.master-secret} est defini, on utilise
+ *     {@link RotatingBasicAuthInterceptor} qui derive le mot de passe a chaque appel.
+ *   - Sinon, on retombe sur le comportement legacy : {@link BasicAuthenticationInterceptor}
+ *     avec username/password statiques.
  */
 @Configuration
 @EnableConfigurationProperties(PastellProperties.class)
@@ -41,48 +43,60 @@ public class PastellConfig {
 
     private static final Logger log = LoggerFactory.getLogger(PastellConfig.class);
 
-    /**
-     * Nom du bean RestClient dedie a Pastell.
-     * Utilise ce nom explicite (plutot que le defaut) permet d'avoir plusieurs
-     * RestClient dans le contexte sans collision (ex. si on ajoute un client HTTP
-     * vers un autre service tiers plus tard).
-     */
     public static final String PASTELL_REST_CLIENT = "pastellRestClient";
 
     private final PastellProperties properties;
 
     public PastellConfig(PastellProperties properties) {
-        // Validation conditionnelle au demarrage :
-        // si enabled=true, tous les champs obligatoires doivent etre renseignes
         properties.validateIfEnabled();
         this.properties = properties;
+    }
+
+    /**
+     * Bean {@link PastellCredentialsProvider}, declare uniquement en mode rotatif.
+     * Permet aux autres composants (controllers admin, page status) d'afficher
+     * le username courant sans avoir a re-deriver eux-memes.
+     */
+    @Bean
+    @ConditionalOnProperty(name = "pastell.master-secret")
+    public PastellCredentialsProvider pastellCredentialsProvider() {
+        log.info("Mode auth Pastell sortante : ROTATIF (HMAC-SHA256, rotation quotidienne UTC).");
+        return new PastellCredentialsProvider(properties.getMasterSecret());
     }
 
     /**
      * RestClient dedie aux appels Pastell.
      *
      * Configure avec :
-     *   - Base URL : prefixe toutes les requetes par l'URL de la plateforme Pastell
-     *   - HTTP Basic Auth : Pastell n'accepte que ce mode (pas de JWT, pas d'OAuth2)
-     *   - Timeouts de connexion et de lecture : pour eviter qu'un Pastell lent
-     *     ne bloque le pool de threads du listener asynchrone (Lot 4)
-     *   - User-Agent identifiable : permet a Libriciel d'identifier les appels
-     *     Sejour dans leurs logs, utile pour le support en cas d'incident
-     *   - Interceptor de logging discret : trace chaque appel sans jamais
-     *     logger les credentials (important pour la securite)
-     *
-     * @return un RestClient configure, pret a etre injecte dans PastellClient (Lot 3)
+     *   - Base URL
+     *   - Auth Basic : rotative (Lot 6) ou statique (legacy), selon la presence de master-secret
+     *   - Timeouts de connexion et de lecture
+     *   - User-Agent identifiable
+     *   - Interceptor de logging discret
      */
     @Bean(PASTELL_REST_CLIENT)
-    public RestClient pastellRestClient() {
+    public RestClient pastellRestClient(
+            org.springframework.beans.factory.ObjectProvider<PastellCredentialsProvider> credentialsProvider) {
         log.info("Initialisation du RestClient Pastell (base URL = {}, timeout = {}ms)",
                 properties.getUrl(), properties.getTimeoutMs());
 
+        ClientHttpRequestInterceptor authInterceptor;
+        PastellCredentialsProvider provider = credentialsProvider.getIfAvailable();
+        if (provider != null) {
+            authInterceptor = new RotatingBasicAuthInterceptor(provider);
+            log.info("Auth interceptor : RotatingBasicAuthInterceptor (username derive = {}).",
+                    provider.getUsername());
+        } else {
+            log.info("Auth interceptor : BasicAuthenticationInterceptor statique (username = {}).",
+                    properties.getUsername());
+            authInterceptor = new BasicAuthenticationInterceptor(
+                    properties.getUsername(),
+                    properties.getPassword());
+        }
+
         return RestClient.builder()
                 .baseUrl(properties.getUrl())
-                .requestInterceptor(new BasicAuthenticationInterceptor(
-                        properties.getUsername(),
-                        properties.getPassword()))
+                .requestInterceptor(authInterceptor)
                 .requestInterceptor(new PastellLoggingInterceptor())
                 .defaultHeader(HttpHeaders.USER_AGENT, "Sejour-Backend/1.0 (Pastell-Integration)")
                 .defaultHeader(HttpHeaders.ACCEPT, "application/json")
@@ -90,29 +104,6 @@ public class PastellConfig {
                 .build();
     }
 
-    /**
-     * RetryTemplate utilise par le wrapper PastellClientWithRetry (Lot 4, niveau 1).
-     *
-     * Configure depuis PastellProperties.Retry :
-     *   - politique simple : maxAttempts (inclut la tentative initiale)
-     *   - backoff exponentiel : initialDelay -> initialDelay * multiplier^n,
-     *     plafonne a maxDelay
-     *
-     * On declare le bean au niveau Pastell (pas global) pour deux raisons :
-     *   1. Cohabitation : si un autre module veut un RetryTemplate avec d'autres
-     *      reglages, il declare le sien sans collision.
-     *   2. Conditional : ce bean disparait quand pastell.enabled=false,
-     *      coherent avec le reste de la config Pastell.
-     *
-     * Pourquoi le RetryTemplate "filtre par classe d'exception" n'est PAS configure ici ?
-     *   - On veut une politique de decision plus fine que "telle classe oui, telle non" :
-     *     dans notre cas, c'est le code HTTP qui decide (501 retryable, 401 non).
-     *   - Cette decision est faite dans PastellClientWithRetry via un appel a
-     *     PastellRetryPolicy. Quand l'exception est non-retryable, le wrapper appelle
-     *     {@code context.setExhaustedOnly()} pour stopper le retry immediatement.
-     *   - Avantage : un seul endroit de verite pour la politique (PastellRetryPolicy),
-     *     reutilise par le scheduler aussi.
-     */
     @Bean("pastellRetryTemplate")
     public RetryTemplate pastellRetryTemplate() {
         PastellProperties.Retry retryProps = properties.getRetry();
@@ -132,10 +123,6 @@ public class PastellConfig {
                 .build();
     }
 
-    /**
-     * Fabrique de requetes HTTP avec timeouts explicites.
-     * Utilise le JDK HttpClient sous-jacent (Java 11+, disponible en Java 25).
-     */
     private org.springframework.http.client.ClientHttpRequestFactory requestFactory() {
         var factory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(properties.getTimeoutMs());
@@ -146,10 +133,6 @@ public class PastellConfig {
     /**
      * Interceptor qui logue les appels Pastell de maniere structuree,
      * sans jamais exposer les credentials (header Authorization NON logue).
-     *
-     * Format : "Pastell call: METHOD /api/xxx.php -> 200 OK (142ms)"
-     *
-     * Niveau INFO en succes, WARN en erreur 4xx, ERROR en 5xx ou exception.
      */
     private static final class PastellLoggingInterceptor implements ClientHttpRequestInterceptor {
 

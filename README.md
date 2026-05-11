@@ -35,7 +35,56 @@ springhotel/
 
 Le projet est organisé en multi-module Maven. Le module `pastell-mock` reproduit fidèlement le comportement de l'API Pastell réelle pour permettre un développement local et des tests d'intégration sans dépendance externe.
 
-## Démarrage rapide
+## Demo en ligne
+
+SpringHotel est deploye en production. Les trois URLs publiques :
+
+- **Application principale** : [hotel-montpellier.netlify.app](https://hotel-montpellier.netlify.app)
+  Compte demo lecture / reservation : `demo@springhotel.fr` / `Malik971*`
+- **Dashboard de demo integration Pastell** : [springhotel-pastell-dashboard.netlify.app](https://springhotel-pastell-dashboard.netlify.app)
+- **Page de status temps reel** : [springhotel-pastell-dashboard.netlify.app/status.html](https://springhotel-pastell-dashboard.netlify.app/status.html)
+
+### Architecture deployee
+
+```
+hotel-montpellier.netlify.app      ──►  springhotel-backend.onrender.com
+                                              │
+                                              ▼
+                                       PostgreSQL Render
+                                              │
+                                              ▼
+                                  springhotel-pastell-mock.onrender.com
+
+springhotel-pastell-dashboard
+    .netlify.app                  ──►  (les deux services Render)
+```
+
+- Deux services Render free tier (sejour-backend, pastell-mock) avec UptimeRobot pour eviter le cold start.
+- Base PostgreSQL Render avec migrations Flyway et seed Montpellier.
+- Frontend principal sur Netlify (build Vite).
+- Dashboard statique sur Netlify, sans build step.
+
+### Donnees disponibles
+
+- Cinq hotels fictifs a Montpellier (Le Peyrou, La Comedie, Antigone Plaza, Port Marianne, Les Pres d'Arenes), trois chambres chacun.
+- Compte demo pre-cree pour parcourir l'app sans s'inscrire.
+
+### Documentation associee
+
+- [DEPLOYMENT.md](./DEPLOYMENT.md) : guide pas a pas pour redeployer from scratch.
+- [DEMO_PUBLIQUE.md](./DEMO_PUBLIQUE.md) : posture securite et garde-fous (compte demo, rate limit, token).
+- [CREDENTIALS.md](./CREDENTIALS.md) : mecanisme de rotation des credentials Pastell par derivation HMAC.
+- [OBSERVABILITY.md](./OBSERVABILITY.md) : les trois couches d'observabilite (Actuator, endpoint custom, page HTML).
+
+---
+
+## Notes sur l'integration de ce patch
+
+- Si le README a deja une section "Demo" ou "Production", merger plutot que dupliquer.
+- Les URLs `springhotel-backend.onrender.com` et `springhotel-pastell-mock.onrender.com` sont a remplacer si tu choisis d'autres noms de services Render.
+- Le schema ASCII est lisible directement sur GitHub. Si tu preferes un schema visuel, je peux generer un `architecture.svg` a la place.
+
+## Demo hors-ligne et guide de développement local
 
 ### Prérequis
 
@@ -130,36 +179,36 @@ Côté commits, j'utilise les conventional commits avec une portée explicite : 
 
 Ce qui fonctionne aujourd'hui :
 
-* recherche d'hôtels par ville, dates, capacité ;
-* filtres combinables prix, catégorie, équipements ;
-* tri par prix, note, nom ;
-* vue carte interactive Leaflet avec marqueurs GPS ;
-* page détail hôtel avec slider d'images ;
-* système de réservation complet ;
-* espace client pour gérer ses réservations ;
-* panel admin pour les utilisateurs, hôtels, chambres ;
-* emails de confirmation via spring-boot-mail ;
-* migrations versionnées Flyway ;
-* intégration Pastell bidirectionnelle complète (5 lots).
+- recherche d'hôtels par ville, dates, capacité ;
+- filtres combinables prix, catégorie, équipements ;
+- tri par prix, note, nom ;
+- vue carte interactive Leaflet avec marqueurs GPS ;
+- page détail hôtel avec slider d'images ;
+- système de réservation complet ;
+- espace client pour gérer ses réservations ;
+- panel admin pour les utilisateurs, hôtels, chambres ;
+- emails de confirmation via spring-boot-mail ;
+- migrations versionnées Flyway ;
+- intégration Pastell bidirectionnelle complète (5 lots).
 
 Ce qui est en cours ou prévu :
 
-* lot 6 d'observabilité avec Micrometer et un dashboard métriques ;
-* migration de l'authentification de session vers JWT stateless ;
-* documentation OpenAPI 3 / Swagger UI ;
-* recherche géospatiale par rayon en kilomètres ;
-* tests unitaires et d'intégration plus larges.
+- lot 6 d'observabilité avec Micrometer et un dashboard métriques ;
+- migration de l'authentification de session vers JWT stateless ;
+- documentation OpenAPI 3 / Swagger UI ;
+- recherche géospatiale par rayon en kilomètres ;
+- tests unitaires et d'intégration plus larges.
 
 ## Ressources liées
 
-* Suivi du projet : [Trello](https://trello.com/b/9Iz00TDD/projet-hotel)
-* Diagrammes UML : [Drive](https://drive.google.com/file/d/1azgBVfcXhUdf6qLXU8zJQ5138nK52xJ-/view)
-* Maquettes : [Figma](https://www.figma.com/site/0BG3Y7PA3CXIIbPyeyrKhX/Projet-Hotel)
-* Document de cadrage : [Doc Mohamed et Malik](https://docs.google.com/document/d/1Lh5e2OUFWu4cGZceroKN7-JqxY0jcAA2zcEmHkMi7PE/edit)
+- Suivi du projet : [Trello](https://trello.com/b/9Iz00TDD/projet-hotel)
+- Diagrammes UML : [Drive](https://drive.google.com/file/d/1azgBVfcXhUdf6qLXU8zJQ5138nK52xJ-/view)
+- Maquettes : [Figma](https://www.figma.com/site/0BG3Y7PA3CXIIbPyeyrKhX/Projet-Hotel)
+- Document de cadrage : [Doc Mohamed et Malik](https://docs.google.com/document/d/1Lh5e2OUFWu4cGZceroKN7-JqxY0jcAA2zcEmHkMi7PE/edit)
 
 ## Contributeurs
 
-* [Mohamed Benchrif](https://github.com/azerkane44)
-* [Malik Ibo](https://github.com/Malik971)
+- [Mohamed Benchrif](https://github.com/azerkane44)
+- [Malik Ibo](https://github.com/Malik971)
 
 Voir les README spécifiques dans chaque sous-dossier pour le détail de chaque couche.
