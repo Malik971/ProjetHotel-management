@@ -31,5 +31,5 @@ window.SPRINGHOTEL_CONFIG = {
   demoAdminToken: "b3d92d3683a75662c00ce072b0274f17",
 
   // Intervalle de rafraichissement de la page status.html (millisecondes).
-  statusRefreshIntervalMs: 5000,
+  statusRefreshIntervalMs: 30000,
 };
