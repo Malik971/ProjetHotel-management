@@ -95,11 +95,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
 
-        // React local + Netlify principal (app) + Netlify dashboard (demo Pastell)
         config.addAllowedOriginPattern("http://localhost:*");
         config.addAllowedOriginPattern("https://hotel-montpellier.netlify.app");
         config.addAllowedOriginPattern("https://pastell-demo.netlify.app");
-        config.addAllowedOriginPattern("https://springhotel-pastell-dashboard.netlify.app");
+        config.addAllowedOriginPattern("https://*.netlify.app");
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
 
