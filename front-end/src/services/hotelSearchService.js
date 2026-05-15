@@ -1,36 +1,47 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL + '/api';
+/**
+ * hotelSearchService.js
+ * Service de recherche d'hotels.
+ *
+ * Reecriture Lot 1 : utilise httpClient.
+ *
+ * Exports proposes (retro-compatibilite garantie) :
+ *   - exports nommes par fonction
+ *   - export default groupant tout
+ *   - export nomme groupant tout
+ */
+
+import { httpClient } from "../api/httpClient";
+
+/**
+ * Recupere la liste de tous les hotels (catalogue public).
+ */
+export async function getAllHotels() {
+    const { data } = await httpClient.get("/api/hotels");
+    return data;
+}
+
+/**
+ * Recupere le detail d'un hotel par son id.
+ */
+export async function getHotelById(id) {
+    const { data } = await httpClient.get(`/api/hotels/${id}`);
+    return data;
+}
+
+/**
+ * Recherche d'hotels par criteres.
+ *
+ * @param {Object} criteria { ville, dateArrivee, dateDepart, voyageurs }
+ */
+export async function searchHotels(criteria) {
+    const { data } = await httpClient.post("/api/hotels/search", criteria);
+    return data;
+}
 
 export const hotelSearchService = {
-  searchHotels: async (searchParams) => {
-    const response = await fetch(`${API_BASE_URL}/hotels/search`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(searchParams),
-    });
-
-    if (!response.ok) {
-      throw new Error('Erreur lors de la recherche');
-    }
-
-    return response.json();
-  },
-
-  getHotelsByLocation: async (ville, latitude, longitude, radiusKm = 10) => {
-    const params = new URLSearchParams({
-      ville,
-      ...(latitude && { latitude }),
-      ...(longitude && { longitude }),
-      radiusKm,
-    });
-
-    const response = await fetch(`${API_BASE_URL}/hotels/search/by-location?${params}`);
-
-    if (!response.ok) {
-      throw new Error('Erreur lors de la recherche par localisation');
-    }
-
-    return response.json();
-  },
+    getAllHotels,
+    getHotelById,
+    searchHotels,
 };
+
+export default hotelSearchService;

@@ -1,7 +1,8 @@
 // src/Pages/ConnexionUser.jsx
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 export default function ConnexionUser() {
     const [email, setEmail] = useState("");
@@ -10,34 +11,45 @@ export default function ConnexionUser() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    // Lot 1 : login() remplace le fetch direct + localStorage manuel.
+    // Le toast succes est gere dans AuthContext.login(), pas ici.
+    const { login, isAdmin } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // Si l'user etait redirige vers Connexion depuis une page protegee,
+    // on tente de le ramener sur cette page apres login.
+    const redirectAfterLogin = location.state?.from?.pathname || "/";
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError("");
         setLoading(true);
 
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/login`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password }),
-            });
+        const success = await login(email, password);
 
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem("id", data.id);
-                localStorage.setItem("email", data.email);
-                localStorage.setItem("role", data.roles[0]);
-                window.location.href = "/";
-            } else {
-                const errorText = await response.text();
-                setError(errorText || "Identifiants incorrects");
-            }
-        } catch (error) {
-            console.error("Erreur fetch :", error);
-            setError("Erreur serveur, veuillez réessayer");
-        } finally {
-            setLoading(false);
+        if (success) {
+            // isAdmin est mis a jour par AuthContext apres le login.
+            // On relit le role depuis le localStorage pour la redirection
+            // car isAdmin du hook peut ne pas encore refleter le nouveau state
+            // au moment ou on execute cette ligne.
+            const roles = JSON.parse(localStorage.getItem("sejour_roles") || "[]");
+            const userIsAdmin = roles.includes("ROLE_ADMIN");
+
+            const target =
+                redirectAfterLogin === "/" && userIsAdmin
+                    ? "/admin"
+                    : redirectAfterLogin;
+
+            navigate(target, { replace: true });
+        } else {
+            // login() a deja affiche un toast.error, mais on garde aussi
+            // le message inline pour les utilisateurs qui auraient desactive
+            // les notifications.
+            setError("Identifiants incorrects");
         }
+
+        setLoading(false);
     };
 
     return (

@@ -1,76 +1,74 @@
-const API_URL = import.meta.env.VITE_API_URL + '/api';
+/**
+ * reservationService.js
+ * Service de gestion des reservations.
+ *
+ * Reecriture Lot 1 : utilise httpClient. Le JWT est ajoute automatiquement
+ * par l'interceptor, plus besoin de le gerer ici.
+ *
+ * Exports proposes (retro-compatibilite garantie) :
+ *   - exports nommes par fonction : import { creerReservation } from '...'
+ *   - export default groupant tout : import reservationService from '...'
+ *   - export nomme groupant tout   : import { reservationService } from '...'
+ *
+ * Tu peux donc utiliser n'importe laquelle des syntaxes selon les composants.
+ */
 
+import { httpClient } from "../api/httpClient";
+
+/**
+ * Cree une nouvelle reservation. Le backend associe automatiquement
+ * la reservation a l'utilisateur authentifie via le JWT, donc plus
+ * besoin d'envoyer userId dans le body.
+ */
+export async function creerReservation(payload) {
+    const { data } = await httpClient.post("/api/reservations", payload);
+    return data;
+}
+
+/**
+ * Recupere les reservations d'un utilisateur (lui-meme ou admin).
+ */
+export async function getReservationsByUser(userId) {
+    const { data } = await httpClient.get(
+        `/api/admin/reservations/user/${userId}`
+    );
+    return data;
+}
+
+/**
+ * Recupere une reservation par son id.
+ */
+export async function getReservationById(id) {
+    const { data } = await httpClient.get(`/api/admin/reservations/${id}`);
+    return data;
+}
+
+/**
+ * Annule une reservation.
+ */
+export async function annulerReservation(id) {
+    const { data } = await httpClient.delete(`/api/admin/reservations/${id}`);
+    return data;
+}
+
+/**
+ * Recupere toutes les reservations (endpoint admin).
+ */
+export async function getAllReservations() {
+    const { data } = await httpClient.get("/api/admin/reservations");
+    return data;
+}
+
+/**
+ * Objet groupant toutes les fonctions du service, pour les composants
+ * qui preferent appeler via reservationService.creerReservation(...).
+ */
 export const reservationService = {
-  /**
-   * Créer une nouvelle réservation
-   */
-  async creerReservation(data) {
-    console.log('📤 reservationService.creerReservation - data:', data);
-
-    try {
-      const response = await fetch(`${API_URL}/reservations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data)
-      });
-
-      console.log('📥 Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Erreur API:', errorText);
-        throw new Error(`Erreur ${response.status}: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Réservation créée:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ Erreur lors de la création de la réservation:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Récupérer les réservations d'un utilisateur
-   */
-  async getMesReservations(userId) {
-    try {
-      const response = await fetch(`${API_URL}/reservations/user/${userId}`);
-
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('❌ Erreur lors de la récupération des réservations:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Annuler une réservation
-   */
-  async annulerReservation(reservationId) {
-    try {
-      const response = await fetch(`${API_URL}/reservations/${reservationId}/annuler`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'annulation:', error);
-      throw error;
-    }
-  }
+    creerReservation,
+    getReservationsByUser,
+    getReservationById,
+    annulerReservation,
+    getAllReservations,
 };
+
+export default reservationService;

@@ -1,30 +1,25 @@
 // src/components/NavBar.jsx
 import { Link, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { useState } from "react";
+import { Menu, X, LogOut } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Navbar() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const navigate = useNavigate();
 
-    const role = typeof window !== "undefined" ? localStorage.getItem("role") : null;
-    const isLogged = !!role;
-    const isAdmin = role === "ROLE_ADMIN";
-    const isEmploye = role === "ROLE_EMPLOYE";
+    // Lot 1 : useAuth remplace les localStorage.getItem directs.
+    // Comportement identique, mais React est maintenant notifie des changements.
+    const { isAuthenticated, isAdmin, isEmploye, logout } = useAuth();
+    const isLogged = isAuthenticated;
 
-    // Fermer le menu mobile lors d'un changement de route
-    useEffect(() => {
-        setMobileOpen(false);
-    }, []);
-
-    const logout = () => {
-        localStorage.clear();
-        window.location.href = "/";
+    const handleLogout = () => {
+        logout();
+        navigate("/");
     };
 
     const Logo = () => (
         <Link to="/" className="flex items-center gap-2 group">
-            {/* Icône logo — vague stylisée */}
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0369A1] flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M3 16C3 16 5 14 7 14C9 14 10 16 12 16C14 16 15 14 17 14C19 14 21 16 21 16" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -34,8 +29,8 @@ export default function Navbar() {
             </div>
             <span className="text-xl font-bold text-[#0369A1] tracking-tight"
                   style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
-        Séjour
-      </span>
+                Séjour
+            </span>
         </Link>
     );
 
@@ -101,7 +96,7 @@ export default function Navbar() {
 
                     {isLogged && (
                         <button
-                            onClick={logout}
+                            onClick={handleLogout}
                             className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:border-[#0EA5E9] hover:text-[#0EA5E9] transition-all"
                         >
                             <LogOut size={14} />
@@ -184,7 +179,7 @@ export default function Navbar() {
 
                             {isLogged && (
                                 <button
-                                    onClick={logout}
+                                    onClick={handleLogout}
                                     className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium"
                                 >
                                     <LogOut size={14} />

@@ -1,51 +1,83 @@
-import axios from 'axios';
+/**
+ * chambreService.js
+ * Service de gestion des chambres.
+ *
+ * Reecriture Lot 1 : utilise httpClient au lieu d'axios direct.
+ *
+ * NOMS DE METHODES : on expose les deux variantes pour etre compatible
+ * avec tous les hooks et composants existants qui appellent ce service :
+ *
+ *   useChambres appelle getChambresByHotel (sans Id)
+ *   useChambres appelle creerChambre (pas createChambre)
+ *   D'autres composants peuvent appeler getChambresByHotelId (avec Id)
+ *
+ * Les deux noms sont disponibles, ils pointent sur la meme fonction.
+ */
 
-const API_BASE_URL = `${import.meta.env.VITE_API_URL}/api/chambres`;
+import { httpClient } from "../api/httpClient";
 
-const chambreService = {
-  // Récupérer toutes les chambres
-  getAllChambres: async () => {
-    const response = await axios.get(API_BASE_URL);
-    return response.data;
-  },
+export async function getAllChambres() {
+    const { data } = await httpClient.get("/api/chambres");
+    return data;
+}
 
-  // Récupérer une chambre par ID
-  getChambreById: async (id) => {
-    const response = await axios.get(`${API_BASE_URL}/${id}`);
-    return response.data;
-  },
+/**
+ * Recupere les chambres d'un hotel.
+ * Deux noms exposes pour compatibilite : getChambresByHotel et getChambresByHotelId
+ */
+export async function getChambresByHotel(hotelId) {
+    const { data } = await httpClient.get(`/api/chambres/hotel/${hotelId}`);
+    return data;
+}
+// Alias pour les composants qui utilisent le nom long
+export const getChambresByHotelId = getChambresByHotel;
 
-  // Récupérer les chambres d'un hôtel
-  getChambresByHotel: async (hotelId) => {
-    const response = await axios.get(`${API_BASE_URL}/hotel/${hotelId}`);
-    return response.data;
-  },
+export async function getChambreById(id) {
+    const { data } = await httpClient.get(`/api/chambres/${id}`);
+    return data;
+}
 
-  // Créer une chambre
-  creerChambre: async (chambre) => {
-    const response = await axios.post(API_BASE_URL, chambre);
-    return response.data;
-  },
+export async function checkDisponibilite(chambreId, dateDebut, dateFin) {
+    const { data } = await httpClient.get("/api/chambres/disponibilite", {
+        params: { chambreId, dateDebut, dateFin },
+    });
+    return data;
+}
 
-  // Modifier une chambre
-  updateChambre: async (id, chambre) => {
-    const response = await axios.put(`${API_BASE_URL}/${id}`, chambre);
-    return response.data;
-  },
+/**
+ * Cree une chambre (admin).
+ * Deux noms exposes : creerChambre (useChambres) et createChambre (autre usage)
+ */
+export async function creerChambre(chambre) {
+    const { data } = await httpClient.post("/api/admin/chambres", chambre);
+    return data;
+}
+export const createChambre = creerChambre;
 
-  // Supprimer une chambre
-  deleteChambre: async (id) => {
-    await axios.delete(`${API_BASE_URL}/${id}`);
-  },
+export async function updateChambre(id, chambre) {
+    const { data } = await httpClient.put(`/api/admin/chambres/${id}`, chambre);
+    return data;
+}
 
-  // Vérifier la disponibilité
-  getChambresDisponibles: async (dateDebut, dateFin, hotelId = null) => {
-    const params = { dateDebut, dateFin };
-    if (hotelId) params.hotelId = hotelId;
+export async function deleteChambre(id) {
+    const { data } = await httpClient.delete(`/api/admin/chambres/${id}`);
+    return data;
+}
 
-    const response = await axios.get(`${API_BASE_URL}/disponibles`, { params });
-    return response.data;
-  }
+/**
+ * Objet groupant toutes les fonctions, pour les imports default ou nommes.
+ * Inclut les deux variantes de noms pour garantir la retro-compatibilite.
+ */
+export const chambreService = {
+    getAllChambres,
+    getChambresByHotel,
+    getChambresByHotelId,
+    getChambreById,
+    checkDisponibilite,
+    creerChambre,
+    createChambre,
+    updateChambre,
+    deleteChambre,
 };
 
 export default chambreService;
