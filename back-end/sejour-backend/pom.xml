@@ -48,6 +48,30 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- JWT : creation et validation des tokens d'authentification.
+         Architecture en 3 modules selon le design JJWT :
+           - jwt-api : interfaces publiques (a importer dans le code metier)
+           - jwt-impl : implementation, en scope runtime
+           - jwt-jackson : serialisation JSON, en scope runtime
+         Lot 0 : authentification stateless du backend Sejour. -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Spring Retry : utilise au Lot 4 pour le retry des appels Pastell -->
         <!-- Declare des maintenant pour figer la structure du classpath -->
         <dependency>
