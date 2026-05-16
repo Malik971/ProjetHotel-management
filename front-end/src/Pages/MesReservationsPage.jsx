@@ -2,14 +2,17 @@
  * MesReservationsPage.jsx
  * Page "Mes reservations" pour un utilisateur connecte.
  *
- * Reecriture Lot 1 :
- *   - utilise httpClient au lieu de fetch hardcoded sur localhost:8080
- *   - utilise useAuth pour recuperer l'utilisateur courant
- *   - affiche les erreurs via toast (sonner) plutot que dans le DOM
+ * Correction Lot 1 :
+ *   - appelle desormais /api/client/reservations/mes-reservations
+ *     (endpoint client deja existant cote backend) au lieu de
+ *     /api/admin/reservations/user/{id} qui exige ROLE_ADMIN.
  *
- * L'endpoint backend appele est /api/admin/reservations/user/{userId},
- * qui est accessible aux ROLE_USER pour leurs propres reservations
- * (verifie cote backend que l'utilisateur consulte bien les siennes).
+ * L'endpoint client lit l'utilisateur depuis le JWT (via Authentication),
+ * donc plus besoin de passer user.id dans l'URL.
+ *
+ * Tous les champs (hotelNom, hotelVille, chambreNom, dateDebut, dateFin,
+ * prixTotal, statut, codeConfirmation) viennent du ReservationResponseDTO
+ * du backend.
  */
 
 import { useEffect, useState } from 'react';
@@ -27,9 +30,9 @@ export default function MesReservationsPage() {
 
         setLoading(true);
         httpClient
-            .get(`/api/admin/reservations/user/${user.id}`)
+            .get('/api/client/reservations/mes-reservations')
             .then((res) => {
-                setReservations(res.data);
+                setReservations(res.data || []);
             })
             .catch((err) => {
                 console.error('Erreur chargement reservations :', err);
@@ -77,9 +80,12 @@ export default function MesReservationsPage() {
                         <div className="flex justify-between items-start mb-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-800">
-                                    Reservation #{reservation.id}
+                                    {reservation.hotelNom || `Reservation #${reservation.id}`}
                                 </h2>
                                 <p className="text-sm text-gray-500">
+                                    {reservation.hotelVille && (
+                                        <span>{reservation.hotelVille} - </span>
+                                    )}
                                     Du {reservation.dateDebut} au {reservation.dateFin}
                                 </p>
                             </div>
@@ -90,7 +96,7 @@ export default function MesReservationsPage() {
                             <div>
                                 <span className="text-gray-500">Chambre :</span>{' '}
                                 <span className="font-medium">
-                                    {reservation.chambre?.numero || 'N/A'}
+                                    {reservation.chambreNom || 'N/A'}
                                 </span>
                             </div>
                             <div>
@@ -100,6 +106,12 @@ export default function MesReservationsPage() {
                                 </span>
                             </div>
                         </div>
+
+                        {reservation.codeConfirmation && (
+                            <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+                                Code de confirmation : <span className="font-mono">{reservation.codeConfirmation}</span>
+                            </div>
+                        )}
                     </div>
                 ))}
             </div>
