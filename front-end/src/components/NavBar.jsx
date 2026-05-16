@@ -1,22 +1,28 @@
 // src/components/NavBar.jsx
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Navbar() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const navigate = useNavigate();
 
-    // Lot 1 : useAuth remplace les localStorage.getItem directs.
-    // Comportement identique, mais React est maintenant notifie des changements.
-    const { isAuthenticated, isAdmin, isEmploye, logout } = useAuth();
+    const { user, isAuthenticated, isAdmin, isEmploye, logout } = useAuth();
     const isLogged = isAuthenticated;
 
     const handleLogout = () => {
         logout();
         navigate("/");
     };
+
+    // Premiere lettre de l'utilisateur pour le cercle profil.
+    // Priorite : firstName, sinon email, sinon point d'interrogation.
+    const initiale = (
+        user?.firstName?.charAt(0)
+        || user?.email?.charAt(0)
+        || "?"
+    ).toUpperCase();
 
     const Logo = () => (
         <Link to="/" className="flex items-center gap-2 group">
@@ -94,6 +100,21 @@ export default function Navbar() {
                         </Link>
                     )}
 
+                    {/* Bouton "Mon profil" : cercle avec initiale + libelle.
+                        Visible des qu'un utilisateur est connecte (admin, employe ou client). */}
+                    {isLogged && (
+                        <Link
+                            to="/mon-profil"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-[#0EA5E9] hover:text-[#0EA5E9] transition-all"
+                            title="Mon profil"
+                        >
+                            <span className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#0369A1] text-white flex items-center justify-center text-xs font-bold">
+                                {initiale}
+                            </span>
+                            <span>Mon profil</span>
+                        </Link>
+                    )}
+
                     {isLogged && (
                         <button
                             onClick={handleLogout}
@@ -134,6 +155,20 @@ export default function Navbar() {
                                 className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9]"
                             >
                                 Mes réservations
+                            </Link>
+                        )}
+
+                        {/* Mon profil mobile, avec initiale en cercle */}
+                        {isLogged && (
+                            <Link
+                                to="/mon-profil"
+                                onClick={() => setMobileOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9]"
+                            >
+                                <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#0369A1] text-white flex items-center justify-center text-xs font-bold">
+                                    {initiale}
+                                </span>
+                                Mon profil
                             </Link>
                         )}
 

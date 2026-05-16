@@ -2,6 +2,7 @@ package com.example.springhotel.controller;
 
 import com.example.springhotel.dto.ReservationResponseDTO;
 import com.example.springhotel.dto.ReservationTimelineDTO;
+import com.example.springhotel.dto.ReservationTimelineDTO.SuiviAdministratif;
 import com.example.springhotel.dto.ReservationTimelineDTO.TimelineEtapeDTO;
 import com.example.springhotel.entity.Reservation;
 import com.example.springhotel.entity.Users;
@@ -17,7 +18,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,18 +30,30 @@ import java.util.stream.Collectors;
 /**
  * Endpoints client pour la gestion des reservations.
  *
- * Extension Lot 2 : ajout de GET /{id}/timeline qui renvoie l'etat de
- * progression d'une reservation en vocabulaire neutre, sans mention de Pastell.
- * Le front React consomme cet endpoint pour afficher la timeline visuelle.
+ * Lot 2 option A2 : la timeline retournee par /timeline contient maintenant
+ * DEUX volets distincts :
+ *   un, etapesSejour : 4 etapes orientees experience voyageur, calculees
+ *       a partir du statut metier et des dates de sejour,
+ *   deux, suiviAdministratif : bloc decrivant l'etat du dossier dans
+ *       le parapheur Pastell, en libelle client adapte.
  *
- * Principe de securite constant dans ce controller : on verifie toujours que
- * la reservation appartient a l'utilisateur connecte via le JWT. Jamais de
- * parametre userId dans l'URL : c'est l'Authentication qui fait foi.
+ * Cette separation reflete la philosophie de Pastell chez les collectivites :
+ * l'agent technique a sa vue detaillee (espace admin), l'usager final voit
+ * son experience metier avec un acces optionnel aux details administratifs.
+ *
+ * Principe de securite : on lit toujours l'identite depuis Authentication
+ * (donc depuis le JWT), jamais depuis un parametre URL.
  */
 @RestController
 @RequestMapping("/api/client/reservations")
 @RequiredArgsConstructor
 public class ClientReservationController {
+
+    /**
+     * Nombre de jours avant la date d'arrivee a partir duquel on considere
+     * que l'hotel "prepare" l'arrivee du client (etape 2 de la timeline).
+     */
+    private static final long JOURS_AVANT_PREPARATION = 7L;
 
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
@@ -78,17 +94,8 @@ public class ClientReservationController {
     }
 
     /**
-     * Renvoie la progression d'une reservation sous forme de timeline
-     * a quatre etapes en vocabulaire neutre.
-     * <p>
-     * Si le PastellSync n'existe pas encore (Pastell pas encore appele),
-     * on renvoie quand meme la timeline avec l'etape 1 DONE et l'etape 2
-     * CURRENT : l'utilisateur voit "en cours de traitement" plutot qu'une
-     * erreur 404 (option A choisie lors de la conception du lot 2).
-     *
-     * @param id             identifiant de la reservation
-     * @param authentication fournie par JwtAuthenticationFilter
-     * @return ReservationTimelineDTO avec les 4 etapes ordonnees
+     * Renvoie la progression d'une reservation en deux volets : experience
+     * voyageur (etapesSejour) et suivi administratif Pastell.
      */
     @GetMapping("/{id}/timeline")
     public ResponseEntity<ReservationTimelineDTO> getTimeline(
@@ -110,16 +117,17 @@ public class ClientReservationController {
             return ResponseEntity.status(403).build();
         }
 
-        // Recuperation du PastellSync : peut etre absent si Pastell n'a pas encore
-        // ete contacte (ex : cold start Render, premier appel en queue async).
         Optional<PastellSync> syncOpt = pastellSyncRepository.findByReservationId(id);
+        PastellSync sync = syncOpt.orElse(null);
 
-        List<TimelineEtapeDTO> etapes = buildTimeline(reservation, syncOpt.orElse(null));
+        List<TimelineEtapeDTO> etapesSejour = buildEtapesSejour(reservation);
+        SuiviAdministratif suiviAdmin = buildSuiviAdministratif(sync);
 
         return ResponseEntity.ok(new ReservationTimelineDTO(
                 reservation.getId(),
                 reservation.getStatut().name(),
-                etapes
+                etapesSejour,
+                suiviAdmin
         ));
     }
 
@@ -146,103 +154,161 @@ public class ClientReservationController {
     }
 
     /**
-     * Construit la liste des 4 etapes de la timeline a partir du statut
-     * de la reservation et de son PastellSync.
+     * Construit la timeline experience voyageur en 4 etapes.
      * <p>
-     * Table de mapping :
-     * <pre>
-     * Statut          | Etape1 | Etape2  | Etape3  | Etape4
-     * EN_ATTENTE      | DONE   | CURRENT | PENDING | PENDING
-     * CONFIRMEE       | DONE   | DONE    | CURRENT | PENDING
-     * TERMINEE        | DONE   | DONE    | DONE    | DONE
-     * ANNULEE         | DONE   | ERROR   | PENDING | PENDING
-     * PastellSync absent => EN_ATTENTE par defaut (option A)
-     * SyncStatus EN_ERREUR/DIVERGENCE => force etape 2 en ERROR
-     * </pre>
+     * Logique de calcul, basee sur le statut et les dates :
+     * <ul>
+     *   <li>Si statut ANNULEE : etape 1 ERROR, le reste PENDING</li>
+     *   <li>Si statut EN_ATTENTE : etape 1 CURRENT, le reste PENDING</li>
+     *   <li>Si statut CONFIRMEE :
+     *     <ul>
+     *       <li>Avant J-7 : etape 1 DONE, etape 2 PENDING</li>
+     *       <li>Entre J-7 et J-1 : etape 1 DONE, etape 2 CURRENT</li>
+     *       <li>Pendant le sejour : 1 et 2 DONE, etape 3 CURRENT</li>
+     *       <li>Apres dateFin : 1, 2 et 3 DONE, etape 4 CURRENT</li>
+     *     </ul>
+     *   </li>
+     *   <li>Si statut TERMINEE : toutes les etapes DONE</li>
+     * </ul>
      */
-    private List<TimelineEtapeDTO> buildTimeline(
-            Reservation reservation,
-            PastellSync sync
-    ) {
+    private List<TimelineEtapeDTO> buildEtapesSejour(Reservation reservation) {
         Reservation.StatutReservation statut = reservation.getStatut();
-        boolean syncEnErreur = sync != null && (
-                sync.getSyncStatus() == SyncStatus.EN_ERREUR
-                        || sync.getSyncStatus() == SyncStatus.DIVERGENCE
-        );
+        LocalDate aujourdhui = LocalDate.now();
+        LocalDate dateDebut = reservation.getDateDebut();
+        LocalDate dateFin = reservation.getDateFin();
 
-        // Date de creation de la reservation pour l'etape 1
+        // Date de creation pour l'etape 1
         Instant dateCreation = reservation.getDateCreation() != null
                 ? reservation.getDateCreation().toInstant(ZoneOffset.UTC)
                 : null;
 
-        // Date de derniere synchro pour les etapes intermediaires
-        Instant dateSynchro = (sync != null && sync.getDerniereSynchro() != null)
-                ? sync.getDerniereSynchro().toInstant(ZoneOffset.UTC)
-                : null;
-
-        List<TimelineEtapeDTO> etapes = new ArrayList<>();
-
-        // Etape 1 : toujours DONE, la reservation est enregistree
-        etapes.add(new TimelineEtapeDTO(
-                1,
-                "Reservation enregistree",
-                "DONE",
-                dateCreation
-        ));
-
-        // Etape 2 : validation administrative
-        String etape2Statut;
-        Instant etape2Date = null;
-        if (syncEnErreur || statut == Reservation.StatutReservation.ANNULEE) {
-            etape2Statut = "ERROR";
-        } else if (statut == Reservation.StatutReservation.CONFIRMEE
-                || statut == Reservation.StatutReservation.TERMINEE) {
-            etape2Statut = "DONE";
-            etape2Date = dateSynchro;
-        } else {
-            // EN_ATTENTE ou PastellSync absent : en cours
-            etape2Statut = "CURRENT";
+        // Cas particulier : reservation annulee
+        if (statut == Reservation.StatutReservation.ANNULEE) {
+            return List.of(
+                    new TimelineEtapeDTO(1, "Reservation annulee", "ERROR", dateCreation),
+                    new TimelineEtapeDTO(2, "Preparation de votre arrivee", "PENDING", null),
+                    new TimelineEtapeDTO(3, "Sejour en cours", "PENDING", null),
+                    new TimelineEtapeDTO(4, "Sejour termine", "PENDING", null)
+            );
         }
-        etapes.add(new TimelineEtapeDTO(
-                2,
-                "En cours de validation",
-                etape2Statut,
-                etape2Date
-        ));
 
-        // Etape 3 : confirmation
+        // Cas particulier : reservation terminee
+        if (statut == Reservation.StatutReservation.TERMINEE) {
+            Instant fin = dateFin != null
+                    ? dateFin.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                    : null;
+            return List.of(
+                    new TimelineEtapeDTO(1, "Reservation confirmee", "DONE", dateCreation),
+                    new TimelineEtapeDTO(2, "Preparation de votre arrivee", "DONE", null),
+                    new TimelineEtapeDTO(3, "Sejour en cours", "DONE", null),
+                    new TimelineEtapeDTO(4, "Sejour termine", "DONE", fin)
+            );
+        }
+
+        // Cas particulier : reservation non encore confirmee
+        if (statut != Reservation.StatutReservation.CONFIRMEE) {
+            return List.of(
+                    new TimelineEtapeDTO(1, "Reservation confirmee", "CURRENT", null),
+                    new TimelineEtapeDTO(2, "Preparation de votre arrivee", "PENDING", null),
+                    new TimelineEtapeDTO(3, "Sejour en cours", "PENDING", null),
+                    new TimelineEtapeDTO(4, "Sejour termine", "PENDING", null)
+            );
+        }
+
+        // Cas confirmee : on calcule l'etape courante selon les dates
+        List<TimelineEtapeDTO> etapes = new ArrayList<>();
+        etapes.add(new TimelineEtapeDTO(1, "Reservation confirmee", "DONE", dateCreation));
+
+        if (dateDebut == null || dateFin == null) {
+            // Securite : si les dates manquent, on s'arrete la
+            etapes.add(new TimelineEtapeDTO(2, "Preparation de votre arrivee", "PENDING", null));
+            etapes.add(new TimelineEtapeDTO(3, "Sejour en cours", "PENDING", null));
+            etapes.add(new TimelineEtapeDTO(4, "Sejour termine", "PENDING", null));
+            return etapes;
+        }
+
+        long joursAvantArrivee = ChronoUnit.DAYS.between(aujourdhui, dateDebut);
+        boolean enSejour = !aujourdhui.isBefore(dateDebut) && !aujourdhui.isAfter(dateFin);
+        boolean sejourPasse = aujourdhui.isAfter(dateFin);
+
+        // Etape 2 : preparation
+        String etape2Statut;
+        if (sejourPasse || enSejour) {
+            etape2Statut = "DONE";
+        } else if (joursAvantArrivee <= JOURS_AVANT_PREPARATION) {
+            etape2Statut = "CURRENT";
+        } else {
+            etape2Statut = "PENDING";
+        }
+        etapes.add(new TimelineEtapeDTO(2, "Preparation de votre arrivee", etape2Statut, null));
+
+        // Etape 3 : sejour en cours
         String etape3Statut;
         Instant etape3Date = null;
-        if (statut == Reservation.StatutReservation.TERMINEE) {
+        if (sejourPasse) {
             etape3Statut = "DONE";
-            etape3Date = dateSynchro;
-        } else if (statut == Reservation.StatutReservation.CONFIRMEE) {
+        } else if (enSejour) {
             etape3Statut = "CURRENT";
+            etape3Date = dateDebut.atStartOfDay(ZoneId.systemDefault()).toInstant();
         } else {
             etape3Statut = "PENDING";
         }
-        etapes.add(new TimelineEtapeDTO(
-                3,
-                "Confirmee",
-                etape3Statut,
-                etape3Date
-        ));
+        etapes.add(new TimelineEtapeDTO(3, "Sejour en cours", etape3Statut, etape3Date));
 
         // Etape 4 : sejour termine
-        String etape4Statut = statut == Reservation.StatutReservation.TERMINEE
-                ? "DONE"
-                : "PENDING";
-        Instant etape4Date = statut == Reservation.StatutReservation.TERMINEE
-                ? dateSynchro
-                : null;
-        etapes.add(new TimelineEtapeDTO(
-                4,
-                "Sejour termine",
-                etape4Statut,
-                etape4Date
-        ));
+        String etape4Statut = sejourPasse ? "CURRENT" : "PENDING";
+        etapes.add(new TimelineEtapeDTO(4, "Sejour termine", etape4Statut, null));
 
         return etapes;
+    }
+
+    /**
+     * Construit le bloc d'information sur le dossier Pastell.
+     * <p>
+     * Si pas de PastellSync (jamais synchronise), on renvoie un statut
+     * d'attente avec un message rassurant. Si erreur ou divergence, on
+     * leve le flag enErreur pour que le front affiche un bandeau.
+     */
+    private SuiviAdministratif buildSuiviAdministratif(PastellSync sync) {
+        if (sync == null) {
+            return new SuiviAdministratif(
+                    "EN_ATTENTE",
+                    "Votre dossier est en cours de traitement administratif",
+                    false,
+                    null
+            );
+        }
+
+        SyncStatus syncStatus = sync.getSyncStatus();
+        Instant derniereSynchro = sync.getDerniereSynchro() != null
+                ? sync.getDerniereSynchro().toInstant(ZoneOffset.UTC)
+                : null;
+
+        boolean enErreur = syncStatus == SyncStatus.EN_ERREUR
+                || syncStatus == SyncStatus.DIVERGENCE;
+
+        String statutPastell = syncStatus != null ? syncStatus.name() : "INCONNU";
+        String message = messageClient(syncStatus);
+
+        return new SuiviAdministratif(statutPastell, message, enErreur, derniereSynchro);
+    }
+
+    /**
+     * Traduit le statut technique Pastell en un message court adapte au
+     * client final. Pas de jargon technique, pas de mention de retries
+     * ou de codes HTTP.
+     */
+    private String messageClient(SyncStatus syncStatus) {
+        if (syncStatus == null) {
+            return "Statut administratif en cours d'evaluation";
+        }
+        return switch (syncStatus) {
+            case OK -> "Votre dossier a ete pris en charge avec succes";
+            case PENDING -> "Votre dossier est en cours de soumission";
+            case EN_RETRY -> "Une nouvelle tentative de soumission est en cours";
+            case EN_ERREUR -> "Une difficulte est survenue, nous revenons vers vous sous 48h";
+            case DIVERGENCE -> "Votre dossier est en cours de verification par notre equipe";
+        };
     }
 
     private ReservationResponseDTO convertToDTO(Reservation reservation) {

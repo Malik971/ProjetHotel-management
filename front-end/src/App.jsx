@@ -30,85 +30,100 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 // EMPLOYE
 import EmployeDashboard from "./Pages/employe/EmployeDashboard";
+import MonProfilPage from "./Pages/MonProfilPage";
+import SuiviReservationPage from "./Pages/SuiviReservationPage";
 
 function App() {
-    return (
-        <BrowserRouter>
-            <AuthProvider>
-                <Toaster
-                    position="top-center"
-                    richColors
-                    closeButton
-                    duration={4000}
-                />
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Toaster position="top-center" richColors closeButton duration={4000} />
 
-                <Routes>
-                    {/* Pages AVEC layout (navbar) */}
-                    <Route element={<MainLayout />}>
-                        <Route path="/" element={<HomePage />} />
-                        {/* Page de gestion des chambres (Admin) */}
-                        <Route path="/chambres" element={<ChambreManagementPage />} />
-                    </Route>
+        <Routes>
+          {/* Pages AVEC layout (navbar) */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<HomePage />} />
+            {/* Page de gestion des chambres (Admin) */}
+            <Route path="/chambres" element={<ChambreManagementPage />} />
+          </Route>
 
-                    {/* Pages SANS layout, navbar retiree */}
-                    <Route path="/hotel/:hotelId" element={<DetailsPage />} />
+          {/* Pages SANS layout, navbar retiree */}
+          <Route path="/hotel/:hotelId" element={<DetailsPage />} />
 
-                    {/* Auth */}
-                    <Route path="/Connexion" element={<ConnexionUser />} />
-                    <Route path="/Inscription" element={<InscriptionUser />} />
+          {/* Auth */}
+          <Route path="/Connexion" element={<ConnexionUser />} />
+          <Route path="/Inscription" element={<InscriptionUser />} />
 
-                    {/* ADMIN */}
-                    <Route
-                        path="/admin"
-                        element={
-                            <ProtectedRoute roleRequired="ROLE_ADMIN">
-                                <AdminDashboard />
-                            </ProtectedRoute>
-                        }
-                    />
+          {/* ADMIN */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-                    <Route
-                        path="/mes-reservations"
-                        element={
-                            <ProtectedRoute>
-                                <MesReservationsPage />
-                            </ProtectedRoute>
-                        }
-                    />
+          <Route
+            path="/mes-reservations"
+            element={
+              <ProtectedRoute>
+                <MesReservationsPage />
+              </ProtectedRoute>
+            }
+          />
 
-                    <Route
-                        path="/admin/add-users"
-                        element={
-                            <ProtectedRoute roleRequired="ROLE_ADMIN">
-                                <AdminUsers />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin/add-hotel"
-                        element={
-                            <ProtectedRoute roleRequired="ROLE_ADMIN">
-                                <CrudHotel />
-                            </ProtectedRoute>
-                        }
-                    />
+          <Route
+            path="/mon-profil"
+            element={
+              <ProtectedRoute>
+                <MonProfilPage />
+              </ProtectedRoute>
+            }
+          />
 
-                    {/* EMPLOYE */}
-                    <Route
-                        path="/employe"
-                        element={
-                            <ProtectedRoute roleRequired="ROLE_EMPLOYE">
-                                <EmployeDashboard />
-                            </ProtectedRoute>
-                        }
-                    />
+          <Route
+            path="/mes-reservations/:id"
+            element={
+              <ProtectedRoute>
+                <SuiviReservationPage />
+              </ProtectedRoute>
+            }
+          />
 
-                    {/* 404 */}
-                    <Route path="*" element={<h1>404</h1>} />
-                </Routes>
-            </AuthProvider>
-        </BrowserRouter>
-    );
+          <Route
+            path="/admin/add-users"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/add-hotel"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <CrudHotel />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* EMPLOYE */}
+          <Route
+            path="/employe"
+            element={
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
+                <EmployeDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* 404 */}
+          <Route path="*" element={<h1>404</h1>} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
 }
 
 export default App;

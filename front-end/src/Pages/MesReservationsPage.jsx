@@ -2,21 +2,16 @@
  * MesReservationsPage.jsx
  * Page "Mes reservations" pour un utilisateur connecte.
  *
- * Correction Lot 1 :
- *   - appelle desormais /api/client/reservations/mes-reservations
- *     (endpoint client deja existant cote backend) au lieu de
- *     /api/admin/reservations/user/{id} qui exige ROLE_ADMIN.
- *
- * L'endpoint client lit l'utilisateur depuis le JWT (via Authentication),
- * donc plus besoin de passer user.id dans l'URL.
- *
- * Tous les champs (hotelNom, hotelVille, chambreNom, dateDebut, dateFin,
- * prixTotal, statut, codeConfirmation) viennent du ReservationResponseDTO
- * du backend.
+ * Evolution Lot 2 : chaque carte de reservation est maintenant cliquable
+ * et mene a la page de suivi /mes-reservations/:id avec timeline visuelle.
+ * Un bouton "Voir le suivi" est ajoute en bas de chaque carte pour le rendre
+ * explicite.
  */
 
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { ArrowRight } from 'lucide-react';
 import { httpClient } from '../api/httpClient';
 import { useAuth } from '../hooks/useAuth';
 
@@ -45,7 +40,7 @@ export default function MesReservationsPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-20">
+            <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
                 <p className="text-gray-500">Chargement de vos reservations...</p>
             </div>
         );
@@ -53,67 +48,84 @@ export default function MesReservationsPage() {
 
     if (reservations.length === 0) {
         return (
-            <div className="max-w-4xl mx-auto py-12 px-4">
-                <h1 className="text-3xl font-bold text-gray-800 mb-6">
-                    Mes reservations
-                </h1>
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                    <p className="text-gray-600">
-                        Vous n'avez pas encore de reservation.
-                    </p>
+            <div className="min-h-screen bg-[#F8FAFC] py-12 px-4">
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
+                        Mes reservations
+                    </h1>
+                    <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm text-center">
+                        <p className="text-gray-600 mb-4">
+                            Vous n'avez pas encore de reservation.
+                        </p>
+                        <Link
+                            to="/"
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0EA5E9] hover:bg-[#0284C7] text-white text-sm font-semibold transition-colors"
+                        >
+                            Decouvrir nos hotels
+                        </Link>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-12 px-4">
-            <h1 className="text-3xl font-bold text-gray-800 mb-6">
-                Mes reservations
-            </h1>
-            <div className="space-y-4">
-                {reservations.map((reservation) => (
-                    <div
-                        key={reservation.id}
-                        className="bg-white rounded-lg shadow p-6"
-                    >
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h2 className="text-lg font-semibold text-gray-800">
-                                    {reservation.hotelNom || `Reservation #${reservation.id}`}
-                                </h2>
-                                <p className="text-sm text-gray-500">
-                                    {reservation.hotelVille && (
-                                        <span>{reservation.hotelVille} - </span>
-                                    )}
-                                    Du {reservation.dateDebut} au {reservation.dateFin}
-                                </p>
+        <div className="min-h-screen bg-[#F8FAFC] py-6 md:py-12">
+            <div className="max-w-4xl mx-auto px-4">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
+                    Mes reservations
+                </h1>
+                <div className="space-y-4">
+                    {reservations.map((reservation) => (
+                        <Link
+                            key={reservation.id}
+                            to={`/mes-reservations/${reservation.id}`}
+                            className="block bg-white border border-gray-100 rounded-2xl p-5 md:p-6 shadow-sm hover:shadow-md hover:border-[#0EA5E9] transition-all group"
+                        >
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
+                                <div className="flex-1">
+                                    <h2 className="text-lg font-semibold text-gray-900 group-hover:text-[#0369A1] transition-colors">
+                                        {reservation.hotelNom || `Reservation #${reservation.id}`}
+                                    </h2>
+                                    <p className="text-sm text-gray-500 mt-0.5">
+                                        {reservation.hotelVille && (
+                                            <span>{reservation.hotelVille} · </span>
+                                        )}
+                                        Du {reservation.dateDebut} au {reservation.dateFin}
+                                    </p>
+                                </div>
+                                <StatusBadge statut={reservation.statut} />
                             </div>
-                            <StatusBadge statut={reservation.statut} />
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span className="text-gray-500">Chambre :</span>{' '}
-                                <span className="font-medium">
-                                    {reservation.chambreNom || 'N/A'}
+                            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                <div>
+                                    <span className="text-gray-500">Chambre </span>
+                                    <span className="font-medium text-gray-800">
+                                        {reservation.chambreNom || 'N/A'}
+                                    </span>
+                                </div>
+                                <div className="text-right sm:text-left">
+                                    <span className="text-gray-500">Prix total </span>
+                                    <span className="font-semibold text-[#0369A1]">
+                                        {reservation.prixTotal} €
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+                                {reservation.codeConfirmation && (
+                                    <span className="text-xs text-gray-400">
+                                        Code : <span className="font-mono">{reservation.codeConfirmation}</span>
+                                    </span>
+                                )}
+                                <span className="ml-auto flex items-center gap-1 text-sm font-medium text-[#0EA5E9] group-hover:gap-2 transition-all">
+                                    Voir le suivi
+                                    <ArrowRight size={14} />
                                 </span>
                             </div>
-                            <div>
-                                <span className="text-gray-500">Prix total :</span>{' '}
-                                <span className="font-medium">
-                                    {reservation.prixTotal} EUR
-                                </span>
-                            </div>
-                        </div>
-
-                        {reservation.codeConfirmation && (
-                            <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
-                                Code de confirmation : <span className="font-mono">{reservation.codeConfirmation}</span>
-                            </div>
-                        )}
-                    </div>
-                ))}
+                        </Link>
+                    ))}
+                </div>
             </div>
         </div>
     );
@@ -121,14 +133,13 @@ export default function MesReservationsPage() {
 
 /**
  * Badge colore selon le statut de la reservation.
- * Au lot 2 on remplacera ca par une timeline visuelle complete.
  */
 function StatusBadge({ statut }) {
     const styles = {
-        EN_ATTENTE: 'bg-yellow-100 text-yellow-800',
-        CONFIRMEE: 'bg-green-100 text-green-800',
-        TERMINEE: 'bg-gray-100 text-gray-800',
-        ANNULEE: 'bg-red-100 text-red-800',
+        EN_ATTENTE: 'bg-amber-50 text-amber-700 border border-amber-200',
+        CONFIRMEE: 'bg-green-50 text-green-700 border border-green-200',
+        TERMINEE: 'bg-gray-50 text-gray-600 border border-gray-200',
+        ANNULEE: 'bg-red-50 text-red-700 border border-red-200',
     };
 
     const labels = {
@@ -138,11 +149,11 @@ function StatusBadge({ statut }) {
         ANNULEE: 'Annulee',
     };
 
-    const className = styles[statut] || 'bg-gray-100 text-gray-800';
+    const className = styles[statut] || 'bg-gray-50 text-gray-600 border border-gray-200';
 
     return (
         <span
-            className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${className}`}
+            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${className}`}
         >
             {labels[statut] || statut}
         </span>
