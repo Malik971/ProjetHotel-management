@@ -51,6 +51,9 @@ public interface PastellSyncRepository extends JpaRepository<PastellSync, Long> 
      */
     List<PastellSync> findAllBySyncStatus(SyncStatus syncStatus);
 
+    List<PastellSync> findBySyncStatusOrderByDerniereSynchroDesc(
+            SyncStatus status, Pageable pageable);
+
     /**
      * Compte les syncs dans un statut donne (Lot 6).
      * Utilise par l'endpoint d'observabilite {@code GET /api/admin/pastell/status}
