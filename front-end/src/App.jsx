@@ -6,6 +6,9 @@
  *   - wrap toute l'app dans <AuthProvider>
  *   - ajout du <Toaster /> de sonner
  *   - le reste de la structure de routes est INCHANGE
+ *
+ * Modifications Lot 3 (sous-lot 3.2) :
+ *   - ajout de la route /admin/pastell (liste paginee des dossiers Pastell)
  */
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -26,6 +29,7 @@ import ChambreManagementPage from "./Pages/ChambreManagementPage";
 import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminUsers from "./Pages/admin/AdminUsers";
 import CrudHotel from "./Pages/admin/CrudHotel";
+import AdminPastellList from "./Pages/admin/AdminPastellList";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // EMPLOYE
@@ -87,6 +91,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <SuiviReservationPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/pastell"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminPastellList />
               </ProtectedRoute>
             }
           />

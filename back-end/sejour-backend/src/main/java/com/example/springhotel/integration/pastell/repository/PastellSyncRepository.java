@@ -2,11 +2,12 @@ package com.example.springhotel.integration.pastell.repository;
 
 import com.example.springhotel.integration.pastell.entity.PastellSync;
 import com.example.springhotel.integration.pastell.entity.SyncStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
@@ -51,7 +52,21 @@ public interface PastellSyncRepository extends JpaRepository<PastellSync, Long> 
      */
     List<PastellSync> findAllBySyncStatus(SyncStatus syncStatus);
 
-    List<PastellSync> findBySyncStatusOrderByDerniereSynchroDesc(
+    /**
+     * Page de syncs filtres par statut, tries de la synchro la plus recente
+     * a la plus ancienne.
+     *
+     * Retourne une {@link Page} (au lieu d'une simple {@link List}) pour exposer
+     * les metadonnees de pagination cote API admin : nombre total d'elements,
+     * nombre total de pages, position courante. Spring Data execute en interne
+     * un SELECT COUNT supplementaire dans la meme transaction, ce qui evite
+     * un aller-retour reseau cote front.
+     *
+     * @param status   statut a filtrer
+     * @param pageable taille de page et numero de page demandes
+     * @return page de syncs (jamais null, peut etre vide)
+     */
+    Page<PastellSync> findBySyncStatusOrderByDerniereSynchroDesc(
             SyncStatus status, Pageable pageable);
 
     /**

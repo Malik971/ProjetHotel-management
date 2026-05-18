@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -38,9 +39,9 @@ import java.util.Optional;
 
 /**
  * Controller admin pour la demonstration et le diagnostic de l'integration Pastell.
- *<p>
+ * <p>
  * <b>Evolution Lot 3 (admin Pastell complet) :</b>
- *   - {@code GET /api/admin/pastell-sync} : liste paginee de tous les dossiers
+ *   - {@code GET /api/admin/pastell-sync} : page de dossiers (PagedResponseDTO)
  *   - {@code GET /api/admin/pastell-sync/{syncId}/journal} : journal d'un dossier
  *   - {@code POST /api/admin/pastell-sync/{syncId}/retry} : relance manuelle
  *   - {@code GET /api/admin/activity} : flux d'activite recente
@@ -166,11 +167,19 @@ public class AdminPastellController {
     // ============================================================
 
     /**
-     * Liste paginee de tous les PastellSync, jointe avec les infos de
-     * reservation pour le tableau admin.
+     * Page de PastellSync, jointe avec les infos de reservation pour le tableau admin.
+     * <p>
+     * Renvoie un {@link PagedResponseDTO} qui contient le contenu de la page et
+     * les metadonnees (totalElements, totalPages, first, last). Cela permet au
+     * front d'afficher une vraie pagination numerotee sans appel supplementaire.
+     *
+     * @param status statut a filtrer (optionnel, null = tous les statuts)
+     * @param page   numero de page demande, 0-based
+     * @param size   taille de page
+     * @return page de dossiers, jamais null
      */
     @GetMapping("/pastell-sync")
-    public ResponseEntity<List<PastellSyncSummaryDTO>> listAllSyncs(
+    public ResponseEntity<PagedResponseDTO<PastellSyncSummaryDTO>> listAllSyncs(
             @RequestParam(required = false) SyncStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
@@ -180,18 +189,13 @@ public class AdminPastellController {
                 Sort.by(Sort.Direction.DESC, "derniereSynchro")
         );
 
-        List<PastellSync> syncs;
-        if (status != null) {
-            syncs = pastellSyncRepository.findBySyncStatusOrderByDerniereSynchroDesc(status, pageRequest);
-        } else {
-            syncs = pastellSyncRepository.findAll(pageRequest).getContent();
-        }
+        Page<PastellSync> syncPage = (status != null)
+                ? pastellSyncRepository.findBySyncStatusOrderByDerniereSynchroDesc(status, pageRequest)
+                : pastellSyncRepository.findAll(pageRequest);
 
-        List<PastellSyncSummaryDTO> dtos = syncs.stream()
-                .map(this::toSummaryDto)
-                .toList();
+        Page<PastellSyncSummaryDTO> dtoPage = syncPage.map(this::toSummaryDto);
 
-        return ResponseEntity.ok(dtos);
+        return ResponseEntity.ok(PagedResponseDTO.from(dtoPage));
     }
 
     /**
