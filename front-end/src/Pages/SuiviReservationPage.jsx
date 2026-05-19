@@ -1,10 +1,10 @@
 // src/Pages/SuiviReservationPage.jsx
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
     ArrowLeft, Calendar, MapPin, Hotel, BedDouble, Hash,
     RefreshCw, CheckCircle2, Clock, Circle, AlertCircle,
-    FileCheck, ChevronDown, ChevronUp, Shield
+    FileCheck, ChevronDown, ChevronUp, Shield, XCircle, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { httpClient } from "../api/httpClient";
@@ -19,11 +19,23 @@ import { useReservationTimeline } from "../hooks/useReservationTimeline";
  *   - Suivi administratif (bloc Pastell, toujours visible, collapsible)
  *
  * Polling toutes les 30 secondes via useReservationTimeline.
+ *
+ * Lot 3 (annulation) : un bouton "Annuler ma reservation" est ajoute sous
+ * le recap. Il n'est visible que si la reservation est annulable, soit
+ * strictement "a venir" et au statut EN_ATTENTE ou CONFIRMEE. Le bouton
+ * declenche une modale de confirmation, puis un DELETE. Si le back
+ * renvoie 409 (conflit metier, par exemple la date du navigateur est
+ * desynchronisee par rapport au serveur), le message d'erreur du back
+ * est affiche tel quel dans un toast.
  */
 export default function SuiviReservationPage() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [reservation, setReservation] = useState(null);
     const [loadingReservation, setLoadingReservation] = useState(true);
+
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
 
     const { timeline, loading: loadingTimeline, error, refresh } =
         useReservationTimeline(id);
@@ -39,6 +51,51 @@ export default function SuiviReservationPage() {
             })
             .finally(() => setLoadingReservation(false));
     }, [id]);
+
+    /**
+     * Test cote front : la reservation est-elle annulable ?
+     * Doit renvoyer true uniquement si le statut autorise l'annulation
+     * ET si la date de debut est strictement dans le futur.
+     * Le back applique la meme regle (et tranche en cas de desaccord).
+     */
+    function isAnnulable(res) {
+        if (!res) return false;
+        const statut = res.statut;
+        const autoriseParStatut =
+            statut === "EN_ATTENTE" || statut === "CONFIRMEE";
+        if (!autoriseParStatut) return false;
+        if (!res.dateDebut) return false;
+
+        // On compare en YYYY-MM-DD pour rester sur l'echelle "jour"
+        // et eviter les pieges de fuseaux horaires.
+        const todayIso = new Date().toISOString().slice(0, 10);
+        return todayIso < res.dateDebut;
+    }
+
+    async function handleCancel() {
+        if (!reservation) return;
+        setCancelling(true);
+        try {
+            await httpClient.delete(`/api/client/reservations/${reservation.id}`);
+            toast.success("Votre reservation a ete annulee.");
+            navigate("/mes-reservations");
+        } catch (err) {
+            const status = err.response?.status;
+            if (status === 409) {
+                const message =
+                    err.response?.data?.message ||
+                    "Cette reservation ne peut plus etre annulee.";
+                toast.error(message);
+            } else if (status === 403) {
+                toast.error("Vous n'avez pas les droits pour annuler cette reservation.");
+            } else {
+                toast.error("Echec de l'annulation. Reessayez dans un instant.");
+            }
+            setConfirmOpen(false);
+        } finally {
+            setCancelling(false);
+        }
+    }
 
     if (loadingReservation && loadingTimeline) {
         return (
@@ -67,6 +124,8 @@ export default function SuiviReservationPage() {
             </div>
         );
     }
+
+    const annulable = isAnnulable(reservation);
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] py-6 md:py-12">
@@ -172,6 +231,22 @@ export default function SuiviReservationPage() {
                                     {reservation.prixTotal} €
                                 </span>
                             </div>
+
+                            {/* Bouton Annuler, visible uniquement si annulable */}
+                            {annulable && (
+                                <div className="mt-6 pt-6 border-t border-gray-100">
+                                    <button
+                                        onClick={() => setConfirmOpen(true)}
+                                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 hover:border-red-300 transition-colors"
+                                    >
+                                        <XCircle size={16} />
+                                        Annuler ma reservation
+                                    </button>
+                                    <p className="text-xs text-gray-400 mt-2 text-center">
+                                        Une reservation n'est annulable qu'avant la date d'arrivee.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -200,6 +275,16 @@ export default function SuiviReservationPage() {
                     <SuiviAdministratifBlock data={timeline.suiviAdministratif} />
                 )}
             </div>
+
+            {/* Modale de confirmation d'annulation */}
+            {confirmOpen && (
+                <CancelConfirmModal
+                    onCancel={() => setConfirmOpen(false)}
+                    onConfirm={handleCancel}
+                    inProgress={cancelling}
+                    reservation={reservation}
+                />
+            )}
         </div>
     );
 }
@@ -289,6 +374,61 @@ function SuiviAdministratifBlock({ data }) {
                     </p>
                 </div>
             )}
+        </div>
+    );
+}
+
+/**
+ * Modale de confirmation d'annulation. Affichee au-dessus du contenu
+ * avec un backdrop semi-transparent. Bloque l'interaction tant que la
+ * decision n'est pas prise.
+ */
+function CancelConfirmModal({ onCancel, onConfirm, inProgress, reservation }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+                <div className="flex items-start gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                        <XCircle size={20} className="text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                        <h2 className="text-base font-semibold text-gray-900">
+                            Annuler cette reservation ?
+                        </h2>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Cette action est definitive. Votre reservation chez{" "}
+                            <span className="font-medium text-gray-900">
+                                {reservation?.hotelNom || "cet hotel"}
+                            </span>{" "}
+                            sera marquee comme annulee.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col-reverse sm:flex-row gap-2 mt-6">
+                    <button
+                        onClick={onCancel}
+                        disabled={inProgress}
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                        Conserver ma reservation
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={inProgress}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                        {inProgress ? (
+                            <>
+                                <Loader2 size={14} className="animate-spin" />
+                                Annulation en cours...
+                            </>
+                        ) : (
+                            "Confirmer l'annulation"
+                        )}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

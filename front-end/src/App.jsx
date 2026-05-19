@@ -7,8 +7,9 @@
  *   - ajout du <Toaster /> de sonner
  *   - le reste de la structure de routes est INCHANGE
  *
- * Modifications Lot 3 (sous-lot 3.2) :
- *   - ajout de la route /admin/pastell (liste paginee des dossiers Pastell)
+ * Modifications Lot 3 :
+ *   - sous-lot 3.2 : route /admin/pastell (liste paginee des dossiers Pastell)
+ *   - sous-lot 3.3 : route /admin/pastell/:reservationId (detail d'un dossier)
  */
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -30,6 +31,7 @@ import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminUsers from "./Pages/admin/AdminUsers";
 import CrudHotel from "./Pages/admin/CrudHotel";
 import AdminPastellList from "./Pages/admin/AdminPastellList";
+import AdminPastellDetail from "./Pages/admin/AdminPastellDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // EMPLOYE
@@ -100,6 +102,15 @@ function App() {
             element={
               <ProtectedRoute roleRequired="ROLE_ADMIN">
                 <AdminPastellList />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/pastell/:reservationId"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminPastellDetail />
               </ProtectedRoute>
             }
           />

@@ -23,7 +23,9 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -43,6 +45,12 @@ import java.util.stream.Collectors;
  *
  * Principe de securite : on lit toujours l'identite depuis Authentication
  * (donc depuis le JWT), jamais depuis un parametre URL.
+ *
+ * Lot 3 (sous-lot annulation) : la suppression d'une reservation est
+ * conditionnee par une regle metier stricte. Une reservation n'est
+ * annulable que si elle est strictement "a venir". Les sejours en cours
+ * ou termines sont irrevocables. Le contrat est explicite cote API :
+ * un 409 Conflict est renvoye avec un message clair en cas de violation.
  */
 @RestController
 @RequestMapping("/api/client/reservations")
@@ -131,8 +139,27 @@ public class ClientReservationController {
         ));
     }
 
+    /**
+     * Annule une reservation appartenant a l'utilisateur authentifie.
+     * <p>
+     * Regle metier appliquee (Lot 3) : une reservation n'est annulable que
+     * si elle est strictement "a venir", c'est-a-dire que la date du jour
+     * est anterieure a sa date de debut. Les cas bloques :
+     * <ul>
+     *   <li>Reservation deja annulee : conflit, message d'idempotence</li>
+     *   <li>Reservation au statut TERMINEE : sejour cloture</li>
+     *   <li>Reservation en cours (today entre dateDebut et dateFin)</li>
+     *   <li>Reservation passee (today posterieure a dateFin)</li>
+     * </ul>
+     * Tous ces cas renvoient un 409 Conflict avec un message lisible cote
+     * front. Le 204 No Content reste reserve au succes effectif.
+     *
+     * @param id             id de la reservation a annuler
+     * @param authentication identite extraite du JWT
+     * @return 204 si succes, 403 si pas le proprietaire, 404 si introuvable, 409 si non annulable
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> annulerReservation(
+    public ResponseEntity<?> annulerReservation(
             @PathVariable Long id,
             Authentication authentication) {
 
@@ -147,10 +174,78 @@ public class ClientReservationController {
             return ResponseEntity.status(403).build();
         }
 
+        // Verification de la regle metier : annulable uniquement si a venir
+        Optional<Map<String, String>> blocage = verifierAnnulabilite(reservation);
+        if (blocage.isPresent()) {
+            return ResponseEntity.status(409).body(blocage.get());
+        }
+
         reservation.setStatut(Reservation.StatutReservation.ANNULEE);
         reservationRepository.save(reservation);
 
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Verifie si une reservation peut etre annulee. Renvoie un Optional
+     * vide si l'annulation est permise, ou un body d'erreur pret a etre
+     * renvoye en 409 sinon.
+     * <p>
+     * Cette methode est extraite pour rendre la regle metier testable
+     * unitairement et pour qu'elle puisse etre reutilisee dans d'autres
+     * endpoints (admin, employe) sans duplication.
+     */
+    private Optional<Map<String, String>> verifierAnnulabilite(Reservation reservation) {
+        Reservation.StatutReservation statut = reservation.getStatut();
+
+        if (statut == Reservation.StatutReservation.ANNULEE) {
+            return Optional.of(erreurAnnulation(
+                    "deja_annulee",
+                    "Cette reservation est deja annulee."
+            ));
+        }
+
+        if (statut == Reservation.StatutReservation.TERMINEE) {
+            return Optional.of(erreurAnnulation(
+                    "sejour_termine",
+                    "Le sejour est termine, vous ne pouvez plus annuler cette reservation."
+            ));
+        }
+
+        LocalDate aujourdhui = LocalDate.now();
+        LocalDate dateDebut = reservation.getDateDebut();
+        LocalDate dateFin = reservation.getDateFin();
+
+        if (dateDebut == null) {
+            // Securite : si les dates manquent, on laisse passer pour ne pas
+            // bloquer une reservation legitime sur une donnee incoherente.
+            return Optional.empty();
+        }
+
+        // La reservation est "a venir" uniquement si today est strictement
+        // anterieure a dateDebut. Le jour J est deja considere comme
+        // un sejour commence (on a reserve la nuit du dateDebut).
+        boolean estAVenir = aujourdhui.isBefore(dateDebut);
+        if (estAVenir) {
+            return Optional.empty();
+        }
+
+        boolean estPassee = dateFin != null && aujourdhui.isAfter(dateFin);
+        String message = estPassee
+                ? "Cette reservation est passee. Annulation impossible."
+                : "Votre sejour a deja commence. Annulation impossible.";
+
+        return Optional.of(erreurAnnulation(
+                estPassee ? "sejour_passe" : "sejour_en_cours",
+                message
+        ));
+    }
+
+    private Map<String, String> erreurAnnulation(String code, String message) {
+        Map<String, String> body = new HashMap<>();
+        body.put("error", code);
+        body.put("message", message);
+        return body;
     }
 
     /**

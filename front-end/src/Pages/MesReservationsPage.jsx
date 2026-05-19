@@ -6,12 +6,16 @@
  * et mene a la page de suivi /mes-reservations/:id avec timeline visuelle.
  * Un bouton "Voir le suivi" est ajoute en bas de chaque carte pour le rendre
  * explicite.
+ *
+ * Iteration UX : ajout d'un lien "Retour a l'accueil" en haut de la page
+ * (cette page n'est pas dans MainLayout, donc sans navbar). Sans ce lien,
+ * l'utilisateur n'avait aucun moyen de revenir en arriere depuis la liste.
  */
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { httpClient } from '../api/httpClient';
 import { useAuth } from '../hooks/useAuth';
 
@@ -72,6 +76,16 @@ export default function MesReservationsPage() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] py-6 md:py-12">
             <div className="max-w-4xl mx-auto px-4">
+
+                {/* Retour a l'accueil */}
+                <Link
+                    to="/"
+                    className="inline-flex items-center gap-2 text-gray-500 hover:text-[#0EA5E9] text-sm font-medium transition-colors mb-6"
+                >
+                    <ArrowLeft size={16} />
+                    Retour a l'accueil
+                </Link>
+
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
                     Mes reservations
                 </h1>
