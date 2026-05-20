@@ -10,6 +10,7 @@
  * Modifications Lot 3 :
  *   - sous-lot 3.2 : route /admin/pastell (liste paginee des dossiers Pastell)
  *   - sous-lot 3.3 : route /admin/pastell/:reservationId (detail d'un dossier)
+ *   - sous-lot 3.4 : route /admin/docs (documentation DevRel)
  */
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -32,6 +33,7 @@ import AdminUsers from "./Pages/admin/AdminUsers";
 import CrudHotel from "./Pages/admin/CrudHotel";
 import AdminPastellList from "./Pages/admin/AdminPastellList";
 import AdminPastellDetail from "./Pages/admin/AdminPastellDetail";
+import AdminDocs from "./Pages/admin/AdminDocs";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // EMPLOYE
@@ -111,6 +113,15 @@ function App() {
             element={
               <ProtectedRoute roleRequired="ROLE_ADMIN">
                 <AdminPastellDetail />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/docs"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminDocs />
               </ProtectedRoute>
             }
           />
