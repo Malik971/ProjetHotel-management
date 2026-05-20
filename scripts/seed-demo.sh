@@ -178,23 +178,17 @@ fi
 
 log_ok "${#HOTEL_IDS[@]} hotels disponibles"
 
-# On stocke pour chaque hotel la liste de ses chambres pour piocher dedans
-declare -A HOTEL_CHAMBRES
-for hotel_id in "${HOTEL_IDS[@]}"; do
-    CHAMBRES_JSON=$(curl -s "${API_URL}/api/hotels/${hotel_id}/chambres" || echo "[]")
-    CHAMBRE_IDS=($(echo "$CHAMBRES_JSON" | jq -r '.[].id'))
-    if [ ${#CHAMBRE_IDS[@]} -gt 0 ]; then
-        HOTEL_CHAMBRES[$hotel_id]="${CHAMBRE_IDS[*]}"
-    fi
-done
+# On recupere TOUTES les chambres de tous les hotels en une seule fois
+log_info "Recuperation de toutes les chambres..."
+ALL_CHAMBRES_JSON=$(curl -s "${API_URL}/api/chambres")
+ALL_CHAMBRE_IDS=($(echo "$ALL_CHAMBRES_JSON" | jq -r '.[].id'))
 
-HOTELS_WITH_CHAMBRES=("${!HOTEL_CHAMBRES[@]}")
-log_ok "${#HOTELS_WITH_CHAMBRES[@]} hotels disposent de chambres reservables"
-
-if [ ${#HOTELS_WITH_CHAMBRES[@]} -eq 0 ]; then
-    log_error "Aucun hotel ne possede de chambre. Impossible de creer des reservations."
+if [ ${#ALL_CHAMBRE_IDS[@]} -eq 0 ]; then
+    log_error "Aucune chambre trouvee. Impossible de creer des reservations."
     exit 1
 fi
+
+log_ok "${#ALL_CHAMBRE_IDS[@]} chambres disponibles au total"
 
 # ============================================================
 # Etape 3 : creation des utilisateurs clients
@@ -272,7 +266,7 @@ creer_reservations() {
     seq 1 "$count" | xargs -P "$PARALLELISM" -I {} bash -c '
         i=$1
         users=('"${CREATED_USERS[*]}"')
-        hotels_avec_chambres=('"${HOTELS_WITH_CHAMBRES[*]}"')
+        all_chambre_ids=('"${ALL_CHAMBRE_IDS[*]}"')
 
         # On choisit un user au hasard parmi ceux crees
         user_email=${users[$((RANDOM % ${#users[@]}))]}
@@ -287,8 +281,8 @@ creer_reservations() {
             exit 0
         fi
 
-        # On choisit un hotel et une chambre au hasard
-        hotel_id=${hotels_avec_chambres[$((RANDOM % ${#hotels_avec_chambres[@]}))]}
+        # On choisit une chambre au hasard parmi toutes celles disponibles
+        chambre_id=${all_chambre_ids[$((RANDOM % ${#all_chambre_ids[@]}))]}
 
         # Choix du profil temporel : 60% futur, 20% en cours, 20% passe
         rand=$((RANDOM % 10))
@@ -308,11 +302,6 @@ creer_reservations() {
         date_fin=$(date -u -d "${fin_offset} days" +%Y-%m-%d 2>/dev/null || date -u -v"${fin_offset}d" +%Y-%m-%d)
 
         nb_personnes=$((1 + RANDOM % 4))
-
-        # On recupere la premiere chambre dispo de cet hotel pour ces dates
-        chambres_resp=$(curl -s "'"${API_URL}"'/api/hotels/${hotel_id}/chambres")
-        chambre_id=$(echo "$chambres_resp" | jq -r ".[0].id // empty")
-        if [ -z "$chambre_id" ]; then exit 0; fi
 
         # Reservation
         curl -s -o /dev/null -X POST "'"${API_URL}"'/api/reservations" \
