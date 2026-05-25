@@ -29,19 +29,53 @@ const INITIAL = {
     tri: "",
 };
 
-export default function Filter({ onFilterChange, onReset }) {
+/**
+ * Composant de filtres.
+ *
+ * Mode desktop (prop isMobile absent ou false) :
+ *   Chaque changement declenche immediatement onFilterChange.
+ *   Le bouton "Appliquer" est conserve mais rendu discret car il n'est
+ *   plus necessaire : il sert uniquement de confirmation visuelle.
+ *
+ * Mode mobile (prop isMobile=true, passe par HomePage quand le drawer est ouvert) :
+ *   Les changements s'accumulent, l'utilisateur clique "Appliquer" pour confirmer.
+ *   Raison : le drawer se ferme apres onFilterChange dans HomePage, donc un filtre
+ *   reactif fermerait le drawer a chaque case cochee, ce qui serait perturbant.
+ *
+ * Pourquoi calculer le nouvel etat avant setFilters ?
+ *   setFilters est asynchrone : si on appelle onFilterChange(filters) juste apres
+ *   setFilters(newVal), on envoie encore l'ancienne valeur de filters. On calcule
+ *   donc newFilters, on le passe a setFilters ET a onFilterChange en meme temps.
+ */
+export default function Filter({ onFilterChange, onReset, isMobile = false }) {
     const [filters, setFilters] = useState(INITIAL);
 
-    const update = (values) =>
-        setFilters((prev) => ({ ...prev, ...values }));
+    /**
+     * Met a jour l'etat et, en mode desktop, notifie immediatement le parent.
+     */
+    const update = (values) => {
+        const newFilters = { ...filters, ...values };
+        setFilters(newFilters);
+        if (!isMobile) {
+            onFilterChange?.(newFilters);
+        }
+    };
 
-    const toggle = (key, value) =>
-        update({
-            [key]: filters[key].includes(value)
-                ? filters[key].filter((v) => v !== value)
-                : [...filters[key], value],
-        });
+    /**
+     * Bascule un element dans un tableau (categorie ou equipements).
+     */
+    const toggle = (key, value) => {
+        const current = filters[key];
+        const newVal = current.includes(value)
+            ? current.filter((v) => v !== value)
+            : [...current, value];
+        update({ [key]: newVal });
+    };
 
+    /**
+     * Bouton "Appliquer" : utile uniquement en mode mobile.
+     * En desktop il reste visible mais son role est redondant.
+     */
     const apply = () => onFilterChange?.(filters);
 
     const reset = () => {
@@ -90,8 +124,8 @@ export default function Filter({ onFilterChange, onReset }) {
                         Prix par nuit
                     </p>
                     <span className="text-sm font-bold text-[#0369A1]">
-            {filters.prixMax} €
-          </span>
+                        {filters.prixMax} €
+                    </span>
                 </div>
                 <input
                     type="range"
@@ -137,8 +171,8 @@ export default function Filter({ onFilterChange, onReset }) {
                             <div className="flex items-center gap-2">
                                 <EtoilesHotel categorie={stars} size="xs" />
                                 <span className="text-xs text-gray-500 group-hover:text-gray-800 transition-colors">
-                  {stars === 5 ? "Luxe" : stars === 4 ? "Premium" : stars === 3 ? "Confort" : "Économique"}
-                </span>
+                                    {stars === 5 ? "Luxe" : stars === 4 ? "Premium" : stars === 3 ? "Confort" : "Économique"}
+                                </span>
                             </div>
                         </label>
                     ))}
@@ -168,8 +202,8 @@ export default function Filter({ onFilterChange, onReset }) {
                                 )}
                             </div>
                             <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
-                {eq.label}
-              </span>
+                                {eq.label}
+                            </span>
                         </label>
                     ))}
                 </div>
@@ -177,12 +211,19 @@ export default function Filter({ onFilterChange, onReset }) {
 
             {/* Actions */}
             <div className="pt-4 border-t border-gray-100 space-y-2">
-                <button
-                    onClick={apply}
-                    className="w-full bg-[#0EA5E9] hover:bg-[#0284C7] text-white py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200"
-                >
-                    Appliquer
-                </button>
+                {/* Appliquer : visible et utile sur mobile, discret sur desktop */}
+                {isMobile ? (
+                    <button
+                        onClick={apply}
+                        className="w-full bg-[#0EA5E9] hover:bg-[#0284C7] text-white py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200"
+                    >
+                        Appliquer
+                    </button>
+                ) : (
+                    <p className="text-center text-xs text-gray-300 py-1">
+                        Les filtres s'appliquent en temps réel
+                    </p>
+                )}
                 <button
                     onClick={reset}
                     className="w-full py-2.5 rounded-xl text-sm text-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200"

@@ -205,6 +205,7 @@ export default function HomePage() {
                       <Filter
                           onFilterChange={handleFilterChange}
                           onReset={handleResetFilters}
+                          isMobile={true}
                       />
                     </div>
                   </div>
