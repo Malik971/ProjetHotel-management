@@ -124,7 +124,11 @@ public class ReservationService {
                 .hotelId(reservation.getChambre().getHotel().getId())
                 .hotelNom(reservation.getChambre().getHotel().getNom())
                 .hotelVille(reservation.getChambre().getHotel().getVille())
-                .hotelImageUrl(reservation.getChambre().getHotel().getImageUrl())
+                .hotelImageUrl(
+                        reservation.getChambre().getHotel().getImageUrls().stream()
+                                .findFirst()
+                                .orElse(null)
+                )
                 .dateDebut(reservation.getDateDebut())
                 .dateFin(reservation.getDateFin())
                 .nomClient(reservation.getNomClient())

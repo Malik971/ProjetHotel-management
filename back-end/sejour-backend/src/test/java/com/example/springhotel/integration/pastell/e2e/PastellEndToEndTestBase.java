@@ -14,6 +14,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Base abstraite pour les tests d'integration end-to-end de l'integration Pastell.
@@ -98,7 +99,7 @@ public abstract class PastellEndToEndTestBase {
                 .adresse("1 rue du Test")
                 .description("Hotel cree pour les tests E2E Pastell")
                 .noteMoyenne(4.5)
-                .imageUrl("https://example.com/hotel.jpg")
+                .imageUrls(List.of("https://example.com/hotel.jpg"))
                 .latitude(43.6108)
                 .longitude(3.8767)
                 .prixMoyenNuit(120.0)

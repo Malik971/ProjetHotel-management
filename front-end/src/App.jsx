@@ -2,15 +2,12 @@
  * App.jsx
  * Composant racine de l'application.
  *
- * Modifications Lot 1 par rapport a la version precedente :
- *   - wrap toute l'app dans <AuthProvider>
- *   - ajout du <Toaster /> de sonner
- *   - le reste de la structure de routes est INCHANGE
- *
- * Modifications Lot 3 :
- *   - sous-lot 3.2 : route /admin/pastell (liste paginee des dossiers Pastell)
- *   - sous-lot 3.3 : route /admin/pastell/:reservationId (detail d'un dossier)
- *   - sous-lot 3.4 : route /admin/docs (documentation DevRel)
+ * Evolution lot 3 (chambre detail) :
+ *   - Route /hotel/:hotelId renommee en /hotel/:hotelSlug
+ *     Le slug encode le nom + l'id : "hotel-des-arceaux-42"
+ *   - DetailsPage remplace par HotelDetailsPage
+ *   - Nouvelle route /hotel/:hotelSlug/chambre/:chambreId → ChambreDetailsPage
+ *   - Nouvelle route /paiement → PagePayement (recoit l'etat via navigate)
  */
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -23,55 +20,50 @@ import MainLayout from "./layout/MainLayout";
 import HomePage from "./Pages/HomePage";
 import ConnexionUser from "./Pages/ConnexionUser";
 import InscriptionUser from "./Pages/InscriptionUser";
-import DetailsPage from "./Pages/DetailsPage";
+import HotelDetailsPage from "./Pages/HotelDetailsPage";
+import ChambreDetailsPage from "./Pages/ChambreDetailsPage";
+import PagePayement from "./Pages/PagePayement";
 import MesReservationsPage from "./Pages/MesReservationsPage";
+import MonProfilPage from "./Pages/MonProfilPage";
+import SuiviReservationPage from "./Pages/SuiviReservationPage";
 
 // ADMIN
-import ChambreManagementPage from "./Pages/ChambreManagementPage";
 import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminUsers from "./Pages/admin/AdminUsers";
-import CrudHotel from "./Pages/admin/CrudHotel";
-import AdminPastellList from "./Pages/admin/AdminPastellList";
-import AdminPastellDetail from "./Pages/admin/AdminPastellDetail";
-import AdminDocs from "./Pages/admin/AdminDocs";
+import AdminHotel from "./Pages/admin/AdminHotel";
+import AdminChambres from "./Pages/admin/AdminChambres";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // EMPLOYE
 import EmployeDashboard from "./Pages/employe/EmployeDashboard";
-import MonProfilPage from "./Pages/MonProfilPage";
-import SuiviReservationPage from "./Pages/SuiviReservationPage";
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Toaster position="top-center" richColors closeButton duration={4000} />
+        <Toaster position="top-right" richColors closeButton duration={4000} />
 
         <Routes>
           {/* Pages AVEC layout (navbar) */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<HomePage />} />
-            {/* Page de gestion des chambres (Admin) */}
-            <Route path="/chambres" element={<ChambreManagementPage />} />
           </Route>
 
-          {/* Pages SANS layout, navbar retiree */}
-          <Route path="/hotel/:hotelId" element={<DetailsPage />} />
+          {/* Hotel + Chambre : sans layout, navbar geree en interne */}
+          <Route path="/hotel/:hotelSlug" element={<HotelDetailsPage />} />
+          <Route
+            path="/hotel/:hotelSlug/chambre/:chambreId"
+            element={<ChambreDetailsPage />}
+          />
+
+          {/* Paiement : recoit l'etat via navigate(state) */}
+          <Route path="/paiement" element={<PagePayement />} />
 
           {/* Auth */}
           <Route path="/Connexion" element={<ConnexionUser />} />
           <Route path="/Inscription" element={<InscriptionUser />} />
 
-          {/* ADMIN */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-
+          {/* Client protege */}
           <Route
             path="/mes-reservations"
             element={
@@ -80,7 +72,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/mes-reservations/:id"
+            element={
+              <ProtectedRoute>
+                <SuiviReservationPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/mon-profil"
             element={
@@ -90,42 +89,15 @@ function App() {
             }
           />
 
+          {/* Admin */}
           <Route
-            path="/mes-reservations/:id"
-            element={
-              <ProtectedRoute>
-                <SuiviReservationPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/admin/pastell"
+            path="/admin"
             element={
               <ProtectedRoute roleRequired="ROLE_ADMIN">
-                <AdminPastellList />
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />
-
-          <Route
-            path="/admin/pastell/:reservationId"
-            element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
-                <AdminPastellDetail />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/admin/docs"
-            element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
-                <AdminDocs />
-              </ProtectedRoute>
-            }
-          />
-
           <Route
             path="/admin/add-users"
             element={
@@ -135,15 +107,23 @@ function App() {
             }
           />
           <Route
-            path="/admin/add-hotel"
+            path="/admin/hotels"
             element={
               <ProtectedRoute roleRequired="ROLE_ADMIN">
-                <CrudHotel />
+                <AdminHotel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/chambres"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminChambres />
               </ProtectedRoute>
             }
           />
 
-          {/* EMPLOYE */}
+          {/* Employe */}
           <Route
             path="/employe"
             element={

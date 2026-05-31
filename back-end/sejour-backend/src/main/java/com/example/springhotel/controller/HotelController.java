@@ -2,16 +2,22 @@ package com.example.springhotel.controller;
 
 import com.example.springhotel.entity.Hotel;
 import com.example.springhotel.repository.HotelRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Controller CRUD pour les hotels.
+ *
+ * Evolution V7 : suppression du systeme d'upload de fichiers.
+ * Les images sont desormais des URLs externes (Unsplash, CDN, etc.)
+ * stockees dans la table hotel_images via Hotel.imageUrls.
+ *
+ * Tous les endpoints acceptent et retournent du JSON uniquement.
+ * Le multipart/form-data est supprime : plus de fichiers sur le serveur.
+ */
 @RestController
 @RequestMapping("/api/hotels")
 @CrossOrigin(origins = "*")
@@ -23,134 +29,64 @@ public class HotelController {
         this.hotelRepository = hotelRepository;
     }
 
-    // 🔹 GET — Tous les hôtels
+    /** GET /api/hotels — Tous les hotels */
     @GetMapping
     public List<Hotel> getAllHotels() {
         return hotelRepository.findAll();
     }
 
-    // 🔹 GET — Hôtel par ID
+    /** GET /api/hotels/{id} — Hotel par ID */
     @GetMapping("/{id}")
-    public Optional<Hotel> getHotelById(@PathVariable Long id) {
-        return hotelRepository.findById(id);
+    public ResponseEntity<Hotel> getHotelById(@PathVariable Long id) {
+        return hotelRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // 🔹 POST — CRÉER un hôtel (JSON uniquement, sans image)
-    @PostMapping(consumes = "application/json")
-    public Hotel createHotelJson(@RequestBody Hotel hotel) {
-        return hotelRepository.save(hotel);
+    /** POST /api/hotels — Creer un hotel (JSON) */
+    @PostMapping
+    public ResponseEntity<Hotel> createHotel(@RequestBody Hotel hotel) {
+        Hotel saved = hotelRepository.save(hotel);
+        return ResponseEntity.status(201).body(saved);
     }
 
-    // 🔹 POST — CRÉER un hôtel avec image (multipart/form-data)
-    @PostMapping(consumes = "multipart/form-data")
-    public Hotel createHotelWithImage(
-            @RequestParam String nom,
-            @RequestParam(required = false) String adresse,
-            @RequestParam(required = false) String ville,
-            @RequestParam(required = false) String description,
-            @RequestParam double noteMoyenne,
-            @RequestParam(required = false) MultipartFile image
-    ) throws Exception {
-
-        Hotel hotel = new Hotel();
-        hotel.setNom(nom);
-        hotel.setAdresse(adresse);
-        hotel.setVille(ville);
-        hotel.setDescription(description);
-        hotel.setNoteMoyenne(noteMoyenne);
-
-        if (image != null && !image.isEmpty()) {
-            String fileName = System.currentTimeMillis() + "_" + image.getOriginalFilename();
-            Path uploadDir = Paths.get("src/main/resources/static/uploads/hotels");
-
-            Files.createDirectories(uploadDir);
-
-            Path filePath = uploadDir.resolve(fileName);
-            Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            hotel.setImageUrl("/uploads/hotels/" + fileName);
-        }
-
-        return hotelRepository.save(hotel);
-    }
-
-    // 🔹 PUT — MODIFIER un hôtel (JSON uniquement, sans image)
+    /** PUT /api/hotels/{id} — Modifier un hotel (JSON) */
     @PutMapping("/{id}")
-    public Hotel updateHotelJson(
+    public ResponseEntity<Hotel> updateHotel(
             @PathVariable Long id,
             @RequestBody Hotel hotelData
     ) {
-        Hotel hotel = hotelRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Hotel introuvable"));
-
-        hotel.setNom(hotelData.getNom());
-        hotel.setAdresse(hotelData.getAdresse());
-        hotel.setVille(hotelData.getVille());
-        hotel.setDescription(hotelData.getDescription());
-        hotel.setNoteMoyenne(hotelData.getNoteMoyenne());
-        hotel.setLatitude(hotelData.getLatitude());
-        hotel.setLongitude(hotelData.getLongitude());
-        hotel.setPrixMoyenNuit(hotelData.getPrixMoyenNuit());
-        hotel.setCategorie(hotelData.getCategorie());
-
-        if (hotelData.getEquipements() != null) {
-            hotel.setEquipements(hotelData.getEquipements());
-        }
-
-        if (hotelData.getImageUrl() != null && !hotelData.getImageUrl().isEmpty()) {
-            hotel.setImageUrl(hotelData.getImageUrl());
-        }
-
-        return hotelRepository.save(hotel);
+        return hotelRepository.findById(id)
+                .map(hotel -> {
+                    hotel.setNom(hotelData.getNom());
+                    hotel.setAdresse(hotelData.getAdresse());
+                    hotel.setVille(hotelData.getVille());
+                    hotel.setDescription(hotelData.getDescription());
+                    hotel.setNoteMoyenne(hotelData.getNoteMoyenne());
+                    hotel.setLatitude(hotelData.getLatitude());
+                    hotel.setLongitude(hotelData.getLongitude());
+                    hotel.setPrixMoyenNuit(hotelData.getPrixMoyenNuit());
+                    hotel.setCategorie(hotelData.getCategorie());
+                    if (hotelData.getEquipements() != null) {
+                        hotel.setEquipements(hotelData.getEquipements());
+                    }
+                    // Mise a jour des URLs d'images (liste complete en remplacement)
+                    if (hotelData.getImageUrls() != null) {
+                        hotel.getImageUrls().clear();
+                        hotel.getImageUrls().addAll(hotelData.getImageUrls());
+                    }
+                    return ResponseEntity.ok(hotelRepository.save(hotel));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    // 🔹 POST — MODIFIER un hôtel avec image (multipart/form-data)
-    @PostMapping(value = "/{id}", consumes = "multipart/form-data")
-    public Hotel updateHotelWithImage(
-            @PathVariable Long id,
-            @RequestParam String nom,
-            @RequestParam(required = false) String adresse,
-            @RequestParam(required = false) String ville,
-            @RequestParam(required = false) String description,
-            @RequestParam double noteMoyenne,
-            @RequestParam(required = false) MultipartFile image
-    ) throws Exception {
-
-        Hotel hotel = hotelRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Hotel introuvable"));
-
-        hotel.setNom(nom);
-        hotel.setAdresse(adresse);
-        hotel.setVille(ville);
-        hotel.setDescription(description);
-        hotel.setNoteMoyenne(noteMoyenne);
-
-        if (image != null && !image.isEmpty()) {
-            String fileName = System.currentTimeMillis() + "_" + image.getOriginalFilename();
-            Path uploadDir = Paths.get("src/main/resources/static/uploads/hotels");
-
-            Files.createDirectories(uploadDir);
-
-            Path filePath = uploadDir.resolve(fileName);
-            Files.copy(image.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-            hotel.setImageUrl("/uploads/hotels/" + fileName);
-        }
-
-        return hotelRepository.save(hotel);
-    }
-
-    // 🔹 DELETE — Supprimer hôtel + image
+    /** DELETE /api/hotels/{id} — Supprimer un hotel */
     @DeleteMapping("/{id}")
-    public void deleteHotel(@PathVariable Long id) throws Exception {
-        Hotel hotel = hotelRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Hotel introuvable"));
-
-        if (hotel.getImageUrl() != null && !hotel.getImageUrl().startsWith("http")) {
-            Path imagePath = Paths.get("src/main/resources/static" + hotel.getImageUrl());
-            Files.deleteIfExists(imagePath);
+    public ResponseEntity<Void> deleteHotel(@PathVariable Long id) {
+        if (!hotelRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
         }
-
-        hotelRepository.delete(hotel);
+        hotelRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }

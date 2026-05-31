@@ -266,15 +266,15 @@ export default function AdminDashboard() {
                         />
                         <AdminQuickCard
                             icon={Building2}
-                            title="Ajouter un hotel"
-                            subtitle="Creer un nouvel hotel"
-                            onClick={() => navigate("/admin/add-hotel")}
+                            title="Gerer les hotels"
+                            subtitle="Ajouter, modifier, supprimer"
+                            onClick={() => navigate("/admin/hotels")}
                         />
                         <AdminQuickCard
                             icon={BedDouble}
                             title="Gerer les chambres"
-                            subtitle="Ajouter ou modifier"
-                            onClick={() => navigate("/chambres")}
+                            subtitle="Ajouter, modifier, photos"
+                            onClick={() => navigate("/admin/chambres")}
                         />
                         <AdminQuickCard
                             icon={BarChart3}

@@ -9,7 +9,7 @@ const FALLBACK_ROOM_IMAGES = [
   "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800&q=80",
 ];
 
-export default function RoomCard({ chambre, onReserver }) {
+export default function RoomCard({ chambre, onReserver, disponible = true, raisonIndispo = null }) {
   if (!chambre) return null;
 
   // Résolution image : priorité à imageUrls[0], sinon imageUrl, sinon fallback aléatoire
@@ -24,8 +24,17 @@ export default function RoomCard({ chambre, onReserver }) {
   // Disponibilité fictive (à brancher sur vraie data quand dispo)
   const available = chambre.disponibles ?? null;
 
-  return (
-      <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-[#0EA5E9]/40 hover:shadow-md hover:shadow-[#0EA5E9]/10 transition-all duration-300 flex flex-col md:flex-row">
+   return (
+      <div className={`bg-white border rounded-2xl overflow-hidden transition-all duration-300 flex flex-col md:flex-row relative ${
+          disponible
+              ? "border-gray-100 hover:border-[#0EA5E9]/40 hover:shadow-md hover:shadow-[#0EA5E9]/10"
+              : "border-gray-100 opacity-70"
+      }`}>
+        {!disponible && raisonIndispo && (
+          <div className="absolute top-3 right-3 z-10 bg-red-100 text-red-700 text-[11px] font-semibold px-2.5 py-1 rounded-lg">
+            {raisonIndispo}
+          </div>
+        )}
 
         {/* Image gauche */}
         <div className="relative flex-shrink-0 w-full md:w-60 h-48 md:h-auto">
@@ -110,10 +119,15 @@ export default function RoomCard({ chambre, onReserver }) {
             </div>
 
             <button
-                onClick={() => onReserver?.(chambre)}
-                className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+                onClick={() => disponible && onReserver?.(chambre)}
+                disabled={!disponible}
+                className={`text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors whitespace-nowrap ${
+                    disponible
+                        ? "bg-[#0EA5E9] hover:bg-[#0284C7] text-white cursor-pointer"
+                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
             >
-              Réserver
+              {disponible ? "Réserver" : "Indisponible"}
             </button>
           </div>
         </div>

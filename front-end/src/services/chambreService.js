@@ -49,18 +49,18 @@ export async function checkDisponibilite(chambreId, dateDebut, dateFin) {
  * Deux noms exposes : creerChambre (useChambres) et createChambre (autre usage)
  */
 export async function creerChambre(chambre) {
-    const { data } = await httpClient.post("/api/admin/chambres", chambre);
+    const { data } = await httpClient.post("/api/chambres", chambre);
     return data;
 }
 export const createChambre = creerChambre;
 
 export async function updateChambre(id, chambre) {
-    const { data } = await httpClient.put(`/api/admin/chambres/${id}`, chambre);
+    const { data } = await httpClient.put(`/api/chambres/${id}`, chambre);
     return data;
 }
 
 export async function deleteChambre(id) {
-    const { data } = await httpClient.delete(`/api/admin/chambres/${id}`);
+    const { data } = await httpClient.delete(`/api/chambres/${id}`);
     return data;
 }
 
