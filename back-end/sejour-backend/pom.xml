@@ -31,6 +31,15 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- OAuth2 Resource Server : apporte BearerTokenAuthenticationFilter,
+     NimbusJwtDecoder, JwtAuthenticationConverter et toute
+     l'infrastructure de validation JWT/OIDC de Spring Security.
+     La version est geree par Spring Boot BOM (pas besoin de la specifier).
+     Lot K2 : active la coexistence JWT maison + Keycloak. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>

@@ -24,7 +24,7 @@ import java.util.Map;
  * un parametre URL. C'est la garantie qu'un utilisateur ne peut modifier
  * que son propre profil.
  *
- * @see com.example.springhotel.security.jwt.JwtAuthenticationFilter
+ * @see JwtAuthenticationFilterOldJWT
  */
 @RestController
 @RequestMapping("/api/client")

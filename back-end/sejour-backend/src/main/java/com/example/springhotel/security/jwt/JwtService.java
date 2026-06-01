@@ -36,7 +36,6 @@ import java.util.Map;
  * RS256 (cle asymetrique) sans changer le reste de l'application.
  *
  * @see JwtProperties
- * @see JwtAuthenticationFilter
  */
 @Service
 public class JwtService {

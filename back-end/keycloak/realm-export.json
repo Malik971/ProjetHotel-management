@@ -1,0 +1,126 @@
+{
+  "realm": "springhotel",
+  "displayName": "SpringHotel",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+
+  "roles": {
+    "realm": [
+      {
+        "name": "ROLE_ADMIN",
+        "description": "Administrateur SpringHotel",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "ROLE_EMPLOYE",
+        "description": "Employe SpringHotel",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "name": "ROLE_USER",
+        "description": "Client SpringHotel",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+
+  "clientScopes": [
+    {
+      "name": "pastell-admin",
+      "description": "Acces aux endpoints d'administration Pastell (sejour-backend)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false",
+        "consent.screen.text": ""
+      }
+    }
+  ],
+
+  "clients": [
+    {
+      "clientId": "springhotel-frontend",
+      "name": "SpringHotel Frontend",
+      "description": "Client public PKCE pour le frontend React (Vite port 5173)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": ["openid", "profile", "email"],
+      "optionalClientScopes": ["pastell-admin"],
+      "protocolMappers": [
+        {
+          "name": "roles-claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin-demo",
+      "enabled": true,
+      "email": "admin@springhotel.local",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Demo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Admin1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ROLE_ADMIN", "ROLE_USER"]
+    },
+    {
+      "username": "user-demo",
+      "enabled": true,
+      "email": "user@springhotel.local",
+      "emailVerified": true,
+      "firstName": "User",
+      "lastName": "Demo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "User1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ROLE_USER"]
+    }
+  ]
+}

@@ -2,8 +2,11 @@ package com.example.springhotel.configuration;
 
 import com.example.springhotel.filter.DemoRateLimitFilter;
 import com.example.springhotel.security.jwt.JwtAuthenticationEntryPoint;
-import com.example.springhotel.security.jwt.JwtAuthenticationFilter;
 import com.example.springhotel.security.jwt.JwtProperties;
+import com.example.springhotel.security.jwt.JwtService;
+import com.example.springhotel.security.oauth2.CompositeJwtDecoder;
+import com.example.springhotel.security.oauth2.KeycloakJwtAuthenticationConverter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +16,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -22,58 +26,109 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 /**
  * Configuration Spring Security de sejour-backend.
  * <p>
- * Evolution Lot 0 : passage en mode stateless avec authentification par JWT.
+ * Evolution Lot K2 : migration du JWT maison vers un Resource Server OAuth2
+ * en mode coexistence. Les deux types de tokens (JWT maison HS256 et tokens
+ * Keycloak RS256) sont acceptes simultanement via un CompositeJwtDecoder.
  * <p>
- * Changements principaux par rapport au Lot 6 :
- *   un, ajout de sessionCreationPolicy STATELESS : Spring ne maintient plus
- *   de session HTTP cote serveur, chaque requete porte son propre token,
- *   deux, branchement de JwtAuthenticationFilter AVANT
- *   UsernamePasswordAuthenticationFilter,
- *   trois, branchement de JwtAuthenticationEntryPoint pour renvoyer du JSON
- *   sur les 401 au lieu de la page HTML par defaut,
- *   quatre, durcissement des routes admin : passage en hasRole("ADMIN") sauf
- *   pour /api/admin/pastell/status et /poll qui restent en permitAll pour le
- *   dashboard demo (controle via X-Demo-Token comme avant),
- *   cinq, /api/reservations passe en authenticated : il faut etre logue pour
- *   reserver une chambre, la reservation est automatiquement liee a
- *   l'utilisateur courant via Authentication.getName().
+ * Changements par rapport au Lot 0 (JWT maison pur) :
+ *   un, suppression du branchement de JwtAuthenticationFilter : le filtre
+ *       BearerTokenAuthenticationFilter de Spring Security le remplace. Il
+ *       fait exactement la meme chose (lit le header Authorization Bearer,
+ *       valide le token, pose l'Authentication) mais en delegant a un
+ *       JwtDecoder pluggable plutot qu'a un filtre maison,
+ *   deux, ajout de oauth2ResourceServer(jwt -> ...) avec CompositeJwtDecoder
+ *       et KeycloakJwtAuthenticationConverter : le decoder dispatche par
+ *       claim "iss", le converter extrait les roles depuis le claim "roles"
+ *       au format ROLE_* (meme format que le JWT maison),
+ *   trois, les endpoints /api/admin/pastell/status et /api/admin/pastell/poll
+ *       passent de permitAll a hasAuthority("SCOPE_pastell-admin") : ils
+ *       exigent desormais un token Keycloak avec le scope pastell-admin,
+ *       ce qui demonstre la gestion des scopes OAuth2.
  * <p>
  * Ce qui ne change pas : CORS, DemoRateLimitFilter, BCryptPasswordEncoder,
- * MyUserDetailsService.
+ * JwtAuthenticationEntryPoint, toutes les regles d'autorisation metier.
+ * <p>
+ * JwtAuthenticationFilter est supprime (remplace par BearerTokenAuthenticationFilter).
+ * JwtService est conserve (utilise par CompositeJwtDecoder pour valider les tokens maison).
  *
+ * @see CompositeJwtDecoder
+ * @see KeycloakJwtAuthenticationConverter
  * @see com.example.springhotel.security.jwt.JwtService
- * @see com.example.springhotel.security.jwt.JwtAuthenticationFilter
- * @see com.example.springhotel.security.jwt.JwtAuthenticationEntryPoint
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
 public class SecurityConfig {
 
     private final DemoRateLimitFilter demoRateLimitFilter;
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtService jwtService;
+
+    /**
+     * Valeur du claim "iss" dans les tokens Keycloak. Utilise uniquement
+     * pour le dispatch dans CompositeJwtDecoder (comparaison de l'emetteur),
+     * pas pour telecharger le JWKS au demarrage.
+     * Exemple : http://localhost:8180/realms/springhotel
+     */
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    private String keycloakIssuerUri;
+
+    /**
+     * URL directe du JWKS Keycloak. Utilise par NimbusJwtDecoder pour
+     * telecharger les cles publiques RSA sans passer par la decouverte OIDC.
+     * Avantage : evite une double requete HTTP au demarrage et resout les
+     * problemes de timing si Keycloak met du temps a etre pret.
+     * Exemple : http://localhost:8180/realms/springhotel/protocol/openid-connect/certs
+     */
+    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+    private String keycloakJwkSetUri;
 
     public SecurityConfig(
             DemoRateLimitFilter demoRateLimitFilter,
-            JwtAuthenticationFilter jwtAuthenticationFilter,
-            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint
+            JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+            JwtService jwtService
     ) {
         this.demoRateLimitFilter = demoRateLimitFilter;
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.jwtService = jwtService;
+    }
+
+    /**
+     * Decodeur JWT composite : lit le claim "iss" pour dispatcher vers
+     * le decodeur Keycloak (RS256 via JWKS) ou le decodeur maison (HS256).
+     * <p>
+     * On utilise withJwkSetUri() plutot que withIssuerLocation() pour pointer
+     * directement sur les cles publiques RSA sans passer par la decouverte OIDC.
+     * withIssuerLocation() fait deux requetes HTTP au demarrage du bean
+     * (.well-known/openid-configuration puis /certs) et peut echouer si Keycloak
+     * n'est pas encore completement pret. withJwkSetUri() fait une seule requete
+     * differee (au premier token recu, pas au demarrage), ce qui est plus robuste.
+     */
+    @Bean
+    public CompositeJwtDecoder compositeJwtDecoder() {
+        NimbusJwtDecoder keycloakDecoder =
+                NimbusJwtDecoder.withJwkSetUri(keycloakJwkSetUri).build();
+        return new CompositeJwtDecoder(keycloakDecoder, jwtService, keycloakIssuerUri);
+    }
+
+    /**
+     * Convertisseur qui extrait les roles (claim "roles") et les scopes
+     * (claim "scope") d'un Jwt valide pour alimenter le SecurityContext.
+     */
+    @Bean
+    public KeycloakJwtAuthenticationConverter keycloakJwtAuthenticationConverter() {
+        return new KeycloakJwtAuthenticationConverter();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                // CSRF inutile pour une API REST consommee par un front qui envoie un JWT
+                // CSRF inutile pour une API REST stateless consommee par un front SPA
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // CORS conserve depuis le Lot 6, durci avec origines explicites
+                // CORS conserve depuis le Lot 0
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // Sessions desactivees : authentification stateless via JWT, plus de
-                // JSESSIONID, plus de session HTTP cote serveur
+                // Sessions desactivees : chaque requete porte son propre token Bearer
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
@@ -81,12 +136,20 @@ public class SecurityConfig {
                 .exceptionHandling(eh ->
                         eh.authenticationEntryPoint(jwtAuthenticationEntryPoint))
 
-                // Ordre des filtres maison :
-                // un, rate limit (avant tout, pour ne pas consommer du CPU sur du spam),
-                // deux, JWT (transforme le token en Authentication),
-                // trois, filtre Spring standard (qui finira par appeler le controller).
+                // DemoRateLimitFilter conserve, avant le filtre OAuth2
                 .addFilterBefore(demoRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // Resource Server OAuth2 avec JWT :
+                // BearerTokenAuthenticationFilter remplace JwtAuthenticationFilter.
+                // Il lit le header Authorization Bearer, appelle compositeJwtDecoder,
+                // puis keycloakJwtAuthenticationConverter pour poser l'Authentication.
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt
+                                .decoder(compositeJwtDecoder())
+                                .jwtAuthenticationConverter(keycloakJwtAuthenticationConverter())
+                        )
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                )
 
                 .authorizeHttpRequests(auth -> auth
 
@@ -96,10 +159,10 @@ public class SecurityConfig {
                         // Sondes Render et UptimeRobot
                         .requestMatchers("/actuator/health", "/actuator/info", "/test").permitAll()
 
-                        // Login et inscription, evidemment publics
+                        // Login et inscription : publics (flux JWT maison conserve)
                         .requestMatchers("/api/v1/login", "/api/v1/register").permitAll()
 
-                        // Catalogue lecture seule, consultable sans compte
+                        // Catalogue lecture seule
                         .requestMatchers(HttpMethod.GET, "/api/hotels/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/chambres/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/hotels/search").permitAll()
@@ -107,24 +170,30 @@ public class SecurityConfig {
                         // Fichiers statiques uploades
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // Endpoints du dashboard demo Pastell, restent ouverts pour la demo,
-                        // le controle d'acces sur le poll est porte par X-Demo-Token comme avant
-                        .requestMatchers(HttpMethod.GET, "/api/admin/pastell/status").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/admin/pastell/poll").permitAll()
+                        // Endpoints Pastell : exigent desormais le scope pastell-admin
+                        // (token Keycloak avec scope optionnel pastell-admin demande
+                        // explicitement par le client lors du login).
+                        // Lot K2 : le dashboard pastell-demo.netlify.app ne fonctionnera
+                        // plus sans Keycloak. En local, utiliser le compte admin-demo
+                        // avec scope pastell-admin.
+                        .requestMatchers(HttpMethod.GET, "/api/admin/pastell/status")
+                        .hasAuthority("SCOPE_pastell-admin")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/pastell/poll")
+                        .hasAuthority("SCOPE_pastell-admin")
 
                         // Routes employe
                         .requestMatchers("/api/employe/**").hasRole("EMPLOYE")
 
-                        // Routes admin : tout le reste de /api/admin/** exige ROLE_ADMIN
+                        // Routes admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Reservation : il faut etre logue pour reserver
+                        // Reservation : il faut etre logue
                         .requestMatchers(HttpMethod.POST, "/api/reservations").authenticated()
 
-                        // Espace client : mes reservations
+                        // Espace client
                         .requestMatchers("/api/client/**").authenticated()
 
-                        // /api/me : identite de l'utilisateur courant
+                        // Identite de l'utilisateur courant
                         .requestMatchers("/api/me").authenticated()
 
                         // Toute autre requete inconnue exige une authentification
@@ -154,8 +223,6 @@ public class SecurityConfig {
         config.addAllowedOriginPattern("https://*.netlify.app");
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
-        // Le front a besoin de pouvoir lire le header Authorization si on l'expose
-        // un jour. Pas critique aujourd'hui mais ca ne coute rien.
         config.addExposedHeader("Authorization");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

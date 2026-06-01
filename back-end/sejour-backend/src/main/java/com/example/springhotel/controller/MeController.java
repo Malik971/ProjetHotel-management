@@ -25,7 +25,7 @@ import java.util.List;
  * L'authentification est faite en amont par JwtAuthenticationFilter. A ce
  * stade, Authentication.getName() renvoie l'email pose dans le claim sub.
  *
- * @see com.example.springhotel.security.jwt.JwtAuthenticationFilter
+ * @see JwtAuthenticationFilterOldJWT
  */
 @RestController
 @RequestMapping("/api")

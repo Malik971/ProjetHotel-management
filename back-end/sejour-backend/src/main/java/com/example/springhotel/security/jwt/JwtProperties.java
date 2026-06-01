@@ -24,7 +24,6 @@ import org.springframework.validation.annotation.Validated;
  * </pre>
  *
  * @see JwtService
- * @see JwtAuthenticationFilter
  */
 @ConfigurationProperties(prefix = "jwt")
 @Validated
