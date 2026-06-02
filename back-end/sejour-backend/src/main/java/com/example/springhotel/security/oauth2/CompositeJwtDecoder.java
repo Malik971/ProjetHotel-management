@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
@@ -135,11 +136,16 @@ public class CompositeJwtDecoder implements JwtDecoder {
      * JwtService. Spring Security attend un Jwt avec au moins les claims
      * "sub" et "exp" pour construire l'Authentication correctement.
      *
-     * @throws JwtException si le token est invalide, expire ou mal signe
+     * On leve BadJwtException (et non JwtException generique) pour que Spring
+     * Security la convertisse en InvalidBearerTokenException, donc en reponse
+     * HTTP 401 propre. Une JwtException generique serait traitee comme une
+     * AuthenticationServiceException, soit une erreur serveur.
+     *
+     * @throws BadJwtException si le token est invalide, expire ou mal signe
      */
     private Jwt decodeHomeMadeToken(String token) {
         if (!jwtService.isTokenValid(token)) {
-            throw new JwtException("Token JWT maison invalide ou expire.");
+            throw new BadJwtException("Token JWT maison invalide ou expire.");
         }
 
         try {
@@ -174,7 +180,7 @@ public class CompositeJwtDecoder implements JwtDecoder {
                     .build();
 
         } catch (ParseException e) {
-            throw new JwtException("Echec du parsing du token JWT maison : " + e.getMessage(), e);
+            throw new BadJwtException("Echec du parsing du token JWT maison : " + e.getMessage(), e);
         }
     }
 }
