@@ -119,3 +119,202 @@ Posture
 Je suis junior, j'assume mes trous, je veux progresser. J'utilise l'IA comme outil de vélocité, pas comme substitut d'apprentissage. Je rédige les définitions à la main, je veux comprendre chaque décision, pas juste recevoir du code.
 Démarrage de cette nouvelle discussion
 Je te dis dans mon prochain message sur quelle priorité (1 à 5 max dans la liste ci-dessus) on attaque en premier, ou je te demande de m'aider à arbitrer. Ne commence rien tant que je n'ai pas validé.
+
+
+
+Pour docker: docker compose logs -f keycloak
+Pour le front-end local: npm run dev
+Pour Keycloak: http://localhost:8180/admin
+Dans le terminal(Keycloak): curl -s -X POST   "http://localhost:8180/realms/springhotel/protocol/openid-connect/token"   -H "Content-Type: application/x-www-form-urlencoded"   -d "grant_type=password"   -d "client_id=springhotel-frontend"   -d "username=admin-demo"   -d "password=Admin1234!"   -d "scope=openid pastell-admin" | jq .
+
+INFRASTRUCTURE (depuis back-end/)
+bash# Démarrer PostgreSQL + Keycloak
+./run-local.sh infra
+
+# Surveiller les logs Keycloak jusqu'au message "Started Keycloak"
+docker compose logs -f keycloak
+
+# Arrêter les conteneurs (données conservées)
+./run-local.sh infra-stop
+
+# Reset complet : supprime les volumes, le realm est réimporté au prochain démarrage
+./run-local.sh infra-reset
+
+# Reset Keycloak uniquement (sans toucher à PostgreSQL)
+docker compose stop keycloak
+docker volume rm back-end_hotel_keycloak_data
+docker compose up -d keycloak
+
+# Vérifier que les conteneurs tournent
+docker compose ps
+
+# Vérifier que Keycloak est prêt (doit retourner du JSON)
+curl http://localhost:8180/realms/springhotel
+
+# Vérifier le document de découverte OIDC complet
+curl http://localhost:8180/realms/springhotel/.well-known/openid-configuration | jq .
+
+
+
+
+
+BUILD MAVEN (depuis back-end/)
+bash# Compiler tout le projet multi-module sans les tests
+mvn clean package -DskipTests
+
+# Compiler uniquement sejour-backend
+mvn -pl sejour-backend clean package -DskipTests
+
+# Compiler uniquement pastell-mock
+mvn -pl pastell-mock clean package -DskipTests
+
+# Compiler avec les tests (tous les modules)
+mvn clean verify
+
+# Forcer le téléchargement des dépendances manquantes
+mvn dependency:resolve
+
+
+
+
+TESTS (depuis back-end/)
+bash# Lancer tous les tests de sejour-backend
+mvn -pl sejour-backend clean test
+
+# Lancer tous les tests de pastell-mock
+mvn -pl pastell-mock clean test
+
+# Lancer un test spécifique par nom de classe
+mvn -pl sejour-backend test -Dtest=PastellClientTest
+
+# Lancer tous les tests et générer le rapport Surefire
+mvn -pl sejour-backend test surefire-report:report
+
+# Afficher uniquement les tests qui échouent
+mvn -pl sejour-backend test | grep -E "FAIL|ERROR|Tests run"
+
+
+
+
+DÉMARRAGE DES SERVICES (depuis back-end/)
+bash# Démarrer pastell-mock (port 8090)
+./run-local.sh mock
+
+# Démarrer sejour-backend (port 8080)
+./run-local.sh backend
+
+# Ordre recommandé pour une session complète
+./run-local.sh infra          # terminal 1 (attendre Keycloak)
+./run-local.sh mock           # terminal 2
+./run-local.sh backend        # terminal 3
+cd ../front-end && npm run dev # terminal 4
+
+
+
+
+FRONTEND (depuis front-end/)
+bash# Installer les dépendances (première fois ou après un git pull)
+npm install
+
+# Démarrer en mode développement (port 5173)
+npm run dev
+
+# Build de production
+npm run build
+
+# Prévisualiser le build de production localement
+npm run preview
+
+# Vérifier les erreurs ESLint
+npm run lint
+
+
+
+
+VÉRIFICATION DES ENDPOINTS (depuis n'importe où)
+bash# Santé du backend
+curl http://localhost:8080/actuator/health | jq .
+
+# Santé du mock Pastell
+curl http://localhost:8090/api/version | jq .
+
+# Login JWT maison (retourne un token maison)
+curl -s -X POST http://localhost:8080/api/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"test123"}' | jq .
+
+# Récupérer un token Keycloak pour admin-demo
+curl -s -X POST \
+  "http://localhost:8180/realms/springhotel/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password&client_id=springhotel-frontend&username=admin-demo&password=Admin1234!&scope=openid pastell-admin" | jq .
+
+# Tester un endpoint protégé avec un token Keycloak (en une seule commande)
+curl -s "http://localhost:8080/api/admin/pastell/status" \
+  -H "Authorization: Bearer $(curl -s -X POST \
+    'http://localhost:8180/realms/springhotel/protocol/openid-connect/token' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -d 'grant_type=password&client_id=springhotel-frontend&username=admin-demo&password=Admin1234!&scope=openid pastell-admin' \
+  | jq -r '.access_token')" | jq .
+
+# Tester /api/me avec un token Keycloak
+curl -s "http://localhost:8080/api/me" \
+  -H "Authorization: Bearer $(curl -s -X POST \
+    'http://localhost:8180/realms/springhotel/protocol/openid-connect/token' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -d 'grant_type=password&client_id=springhotel-frontend&username=admin-demo&password=Admin1234!&scope=openid' \
+  | jq -r '.access_token')" | jq .
+
+# Vérifier qu'un endpoint sans token retourne 401
+curl -s http://localhost:8080/api/admin/pastell/status | jq .
+
+# Lister les hôtels (endpoint public)
+curl -s http://localhost:8080/api/hotels | jq .
+
+
+
+
+GIT (depuis _WORKSPACE/)
+bash# Voir l'état courant
+git status
+
+# Voir les branches
+git branch -a
+
+# Vérifier que origin pointe sur ton repo
+git remote -v
+
+# Commit avec message conventionnel
+git add .
+git commit -m "feat(auth): description du changement"
+
+# Pousser sur la branche courante
+git push origin main
+
+# Voir le log des derniers commits
+git log --oneline -10
+
+
+
+
+
+DOCKER UTILITAIRES
+bash# Voir tous les conteneurs (actifs et arrêtés)
+docker ps -a
+
+# Voir les volumes existants
+docker volume ls
+
+# Voir les logs PostgreSQL
+docker compose logs -f postgres
+
+# Se connecter à PostgreSQL en ligne de commande
+docker exec -it hotel_postgres psql -U postgres -d hotel_db
+
+# Vérifier les migrations Flyway depuis PostgreSQL
+docker exec -it hotel_postgres psql -U postgres -d hotel_db \
+  -c "SELECT version, description, installed_on FROM flyway_schema_history ORDER BY installed_rank;"
+
+# Vérifier la colonne keycloak_sub (après migration V8)
+docker exec -it hotel_postgres psql -U postgres -d hotel_db \
+  -c "SELECT id, email, keycloak_sub FROM users;"
