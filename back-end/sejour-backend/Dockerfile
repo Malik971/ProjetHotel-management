@@ -19,14 +19,14 @@
 # ───────────────────────────────
 FROM maven:3.9.6-eclipse-temurin-21 AS builder
 
-WORKDIR /workspace
+WORKDIR /back-end
 
 # Copier les poms en premier pour profiter du cache Docker :
 # si seul le code change (sans toucher aux dependances), cette etape
 # ne sera pas re-jouee, et Maven n'aura pas a retelecharger Internet.
-COPY pom.xml /workspace/pom.xml
-COPY sejour-backend/pom.xml /workspace/sejour-backend/pom.xml
-COPY pastell-mock/pom.xml /workspace/pastell-mock/pom.xml
+COPY pom.xml /back-end/pom.xml
+COPY sejour-backend/pom.xml /back-end/sejour-backend/pom.xml
+COPY pastell-mock/pom.xml /back-end/pastell-mock/pom.xml
 
 # Pre-fetch des dependances Maven du module cible.
 # -pl sejour-backend : on construit ce module
@@ -37,7 +37,7 @@ RUN mvn -pl sejour-backend -am dependency:go-offline -B
 # Copier le code source du module cible UNIQUEMENT.
 # On ne copie pas pastell-mock/src, pour ne pas invalider le cache
 # Docker quand on touche au mock seul.
-COPY sejour-backend/src /workspace/sejour-backend/src
+COPY sejour-backend/src /back-end/sejour-backend/src
 
 # Build, sans les tests (rapide sur Render, les tests tournent en CI
 # avant le merge sur main).
@@ -52,7 +52,7 @@ WORKDIR /app
 
 # Copier le JAR Spring Boot fat-jar depuis le builder.
 # Le wildcard *.jar capture le nom version sans avoir a le coder en dur.
-COPY --from=builder /workspace/sejour-backend/target/*.jar /app/app.jar
+COPY --from=builder /back-end/sejour-backend/target/*.jar /app/app.jar
 
 # Port d'ecoute (Render le configure via la variable PORT).
 # EXPOSE est informatif uniquement.
