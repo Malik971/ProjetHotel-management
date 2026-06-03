@@ -1,13 +1,6 @@
 /**
  * App.jsx
  * Composant racine de l'application.
- *
- * Evolution lot 3 (chambre detail) :
- *   - Route /hotel/:hotelId renommee en /hotel/:hotelSlug
- *     Le slug encode le nom + l'id : "hotel-des-arceaux-42"
- *   - DetailsPage remplace par HotelDetailsPage
- *   - Nouvelle route /hotel/:hotelSlug/chambre/:chambreId → ChambreDetailsPage
- *   - Nouvelle route /paiement → PagePayement (recoit l'etat via navigate)
  */
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -32,6 +25,9 @@ import AdminDashboard from "./Pages/admin/AdminDashboard";
 import AdminUsers from "./Pages/admin/AdminUsers";
 import AdminHotel from "./Pages/admin/AdminHotel";
 import AdminChambres from "./Pages/admin/AdminChambres";
+import AdminDocs from "./Pages/admin/AdminDocs";
+import AdminPastellList from "./Pages/admin/AdminPastellList";
+import AdminPastellDetail from "./Pages/admin/AdminPastellDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // EMPLOYE
@@ -41,7 +37,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Toaster position="top-right" richColors closeButton duration={4000} />
+        <Toaster position="top-center" richColors closeButton duration={4000} />
 
         <Routes>
           {/* Pages AVEC layout (navbar) */}
@@ -56,7 +52,7 @@ function App() {
             element={<ChambreDetailsPage />}
           />
 
-          {/* Paiement : recoit l'etat via navigate(state) */}
+          {/* Paiement */}
           <Route path="/paiement" element={<PagePayement />} />
 
           {/* Auth */}
@@ -95,6 +91,30 @@ function App() {
             element={
               <ProtectedRoute roleRequired="ROLE_ADMIN">
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/docs"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminDocs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/pastell"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminPastellList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/pastell/:reservationId"
+            element={
+              <ProtectedRoute roleRequired="ROLE_ADMIN">
+                <AdminPastellDetail />
               </ProtectedRoute>
             }
           />

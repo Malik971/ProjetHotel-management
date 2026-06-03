@@ -111,7 +111,7 @@ function generateState() {
  *
  * @param {string} scope - Scopes OAuth2 demandes (ex: 'openid' ou 'openid pastell-admin')
  */
-export async function loginWithKeycloak(scope = 'openid profile email') {
+export async function loginWithKeycloak(scope = 'openid pastell-admin') {
     const verifier = generateCodeVerifier();
     const challenge = await generateCodeChallenge(verifier);
     const state = generateState();

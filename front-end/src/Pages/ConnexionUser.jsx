@@ -87,7 +87,7 @@ export default function ConnexionUser() {
         // La fonction redirige le navigateur, setKeycloakLoading(false) ne s'execute pas.
         // On le garde quand meme pour le cas ou la redirection echoue.
         try {
-            await loginWithKeycloak('openid profile email');
+            await loginWithKeycloak('openid pastell-admin');
         } catch {
             setKeycloakLoading(false);
             setError("Impossible de contacter Keycloak. Verifiez que le serveur est demarre.");

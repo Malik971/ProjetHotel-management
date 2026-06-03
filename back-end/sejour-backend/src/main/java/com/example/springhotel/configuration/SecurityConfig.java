@@ -177,9 +177,9 @@ public class SecurityConfig {
                         // plus sans Keycloak. En local, utiliser le compte admin-demo
                         // avec scope pastell-admin.
                         .requestMatchers(HttpMethod.GET, "/api/admin/pastell/status")
-                        .hasAuthority("SCOPE_pastell-admin")
+                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/pastell/poll")
-                        .hasAuthority("SCOPE_pastell-admin")
+                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN")
 
                         // Routes employe
                         .requestMatchers("/api/employe/**").hasRole("EMPLOYE")

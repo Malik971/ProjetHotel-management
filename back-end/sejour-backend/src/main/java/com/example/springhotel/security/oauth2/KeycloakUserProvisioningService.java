@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -158,7 +159,11 @@ public class KeycloakUserProvisioningService {
             email = sub + "+" + UUID.randomUUID().toString().substring(0, 8) + "@keycloak.local";
         }
 
-        Role roleUser = roleRepository.findByName("ROLE_USER");
+        // Lecture des roles depuis le claim "roles" du token Keycloak.
+        // Le mapper roles-claim (realm-export.json) publie ROLE_ADMIN, ROLE_USER, etc.
+        // On cherche chaque role en base ; ceux qui n'existent pas sont ignores.
+        // Si aucun role valide n'est trouve, on attribue ROLE_USER par defaut.
+        List<Role> roles = resolveRolesFromToken(jwt);
 
         Users user = new Users();
         user.setKeycloakSub(sub);
@@ -169,8 +174,44 @@ public class KeycloakUserProvisioningService {
         // On encode une chaine vide pour satisfaire la contrainte NOT NULL en base.
         user.setPassword(passwordEncoder.encode(""));
         user.setEnabled(true);
-        user.setRoles(List.of(roleUser));
+        user.setRoles(roles);
 
         return user;
+    }
+
+    /**
+     * Resout la liste des roles Spring a partir du claim "roles" du token Keycloak.
+     * <p>
+     * Seuls les roles presents en base sont inclus. Les roles Keycloak qui n'ont
+     * pas d'equivalent en base (ex : roles techniques Keycloak) sont ignores.
+     * Si la liste finale est vide, on attribue ROLE_USER comme filet de securite.
+     *
+     * @param jwt le token Keycloak valide
+     * @return liste non vide de roles Spring
+     */
+    private List<Role> resolveRolesFromToken(Jwt jwt) {
+        List<String> tokenRoles = jwt.getClaimAsStringList("roles");
+        List<Role> resolved = new ArrayList<>();
+
+        if (tokenRoles != null) {
+            for (String roleName : tokenRoles) {
+                Role role = roleRepository.findByName(roleName);
+                if (role != null) {
+                    resolved.add(role);
+                } else {
+                    log.debug("Role Keycloak '{}' absent en base, ignore.", roleName);
+                }
+            }
+        }
+
+        if (resolved.isEmpty()) {
+            log.warn("Aucun role valide extrait du token, ROLE_USER attribue par defaut.");
+            Role fallback = roleRepository.findByName("ROLE_USER");
+            if (fallback != null) {
+                resolved.add(fallback);
+            }
+        }
+
+        return resolved;
     }
 }

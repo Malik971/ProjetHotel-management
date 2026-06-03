@@ -318,3 +318,22 @@ docker exec -it hotel_postgres psql -U postgres -d hotel_db \
 # Vérifier la colonne keycloak_sub (après migration V8)
 docker exec -it hotel_postgres psql -U postgres -d hotel_db \
   -c "SELECT id, email, keycloak_sub FROM users;"
+
+DEMARRER KEYCLOAK
+Malik@MALIKPC MINGW64 ~/Desktop/Projet Code/DAWAN/Projet_Recherche_Hotel/_WORKSPACE/back-end (main)
+$ docker compose stop keycloak
+[+] stop 0/1
+Malik@MALIKPC MINGW64 ~/Desktop/Projet Code/DAWAN/Projet_Recherche_Hotel/_WORKSPACE/back-end (main)                                                                           
+$ docker compose rm -f keycloak
+Going to remove hotel_keycloak
+[+] remove 0/1
+Malik@MALIKPC MINGW64 ~/Desktop/Projet Code/DAWAN/Projet_Recherche_Hotel/_WORKSPACE/back-end (main)                                                                            
+$ docker volume rm back-end_hotel_keycloak_data
+back-end_hotel_keycloak_data
+
+Malik@MALIKPC MINGW64 ~/Desktop/Projet Code/DAWAN/Projet_Recherche_Hotel/_WORKSPACE/back-end (main)
+$ docker compose up -d keycloak
+[+] up 2/2
+Malik@MALIKPC MINGW64 ~/Desktop/Projet Code/DAWAN/Projet_Recherche_Hotel/_WORKSPACE/back-end (main)                                                                            
+$ docker compose logs -f keycloak
+

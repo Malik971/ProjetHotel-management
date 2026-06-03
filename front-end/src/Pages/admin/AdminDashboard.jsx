@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
     CheckCircle2, Clock, RefreshCw, AlertTriangle, ArrowRight,
     List, BookOpen, ExternalLink, ArrowUp, Activity, ArrowLeft,
-    UserPlus, Building2, BedDouble, BarChart3, Home
+    UserPlus, Building2, BedDouble, BarChart3
 } from "lucide-react";
 
 import StatusBadge from "../../components/admin/StatusBadge";
@@ -27,6 +27,10 @@ import {
  *   4. Gestion du site (cartes utilisateur, hotel, chambre, statistiques)
  *
  * Polling toutes les 10 secondes pour rafraichir les compteurs et l'activite.
+ *
+ * Lot K5 : loadAll passe a Promise.allSettled pour isoler les echecs.
+ * Si getPastellStatus() echoue (ex : token sans SCOPE_pastell-admin),
+ * getRecentActivity() est quand meme traite et l'activite s'affiche.
  */
 export default function AdminDashboard() {
     const navigate = useNavigate();
@@ -37,14 +41,28 @@ export default function AdminDashboard() {
 
     const loadAll = async () => {
         try {
-            const [s, a] = await Promise.all([
+            // Promise.allSettled : chaque promesse est resolue independamment.
+            // Un echec sur getPastellStatus (ex : 403 sans scope pastell-admin)
+            // ne bloque plus le chargement de l'activite recente.
+            const [statusResult, activityResult] = await Promise.allSettled([
                 getPastellStatus(),
                 getRecentActivity(10),
             ]);
-            setStatus(s);
-            setActivity(a);
+
+            if (statusResult.status === "fulfilled") {
+                setStatus(statusResult.value);
+            } else {
+                console.warn("getPastellStatus echoue :", statusResult.reason);
+            }
+
+            if (activityResult.status === "fulfilled") {
+                setActivity(activityResult.value);
+            } else {
+                console.warn("getRecentActivity echoue :", activityResult.reason);
+            }
+
         } catch (e) {
-            console.error("Erreur chargement dashboard admin", e);
+            console.error("Erreur inattendue chargement dashboard admin", e);
             toast.error("Impossible de charger le tableau de bord");
         } finally {
             setLoading(false);
@@ -252,7 +270,7 @@ export default function AdminDashboard() {
                     )}
                 </div>
 
-                {/* Gestion du site (option B : tes cartes admin classiques) */}
+                {/* Gestion du site */}
                 <div className="mb-6">
                     <h2 className="text-base font-semibold text-gray-900 mb-4">
                         Gestion du site
@@ -290,9 +308,6 @@ export default function AdminDashboard() {
     );
 }
 
-/**
- * Carte cliquable pour les actions admin classiques (utilisateurs, hotels, etc).
- */
 function AdminQuickCard({ icon: Icon, title, subtitle, onClick, disabled }) {
     const baseClass = "bg-white border rounded-2xl p-4 shadow-sm transition-all text-left";
     if (disabled) {
@@ -316,9 +331,6 @@ function AdminQuickCard({ icon: Icon, title, subtitle, onClick, disabled }) {
     );
 }
 
-/**
- * Ligne d'activite cliquable du flux Pastell.
- */
 function ActivityRow({ item, onClick }) {
     const iconConfig = getActivityIcon(item.type);
     return (
@@ -346,31 +358,16 @@ function ActivityRow({ item, onClick }) {
 function getActivityIcon(type) {
     switch (type) {
         case "OK":
-            return {
-                bg: "bg-emerald-50",
-                icon: <CheckCircle2 size={12} className="text-emerald-600" />,
-            };
+            return { bg: "bg-emerald-50", icon: <CheckCircle2 size={12} className="text-emerald-600" /> };
         case "EN_RETRY":
-            return {
-                bg: "bg-amber-50",
-                icon: <RefreshCw size={12} className="text-amber-700" />,
-            };
+            return { bg: "bg-amber-50", icon: <RefreshCw size={12} className="text-amber-700" /> };
         case "PENDING":
-            return {
-                bg: "bg-sky-50",
-                icon: <ArrowUp size={12} className="text-[#0369A1]" />,
-            };
+            return { bg: "bg-sky-50", icon: <ArrowUp size={12} className="text-[#0369A1]" /> };
         case "EN_ERREUR":
         case "DIVERGENCE":
-            return {
-                bg: "bg-red-50",
-                icon: <AlertTriangle size={12} className="text-red-700" />,
-            };
+            return { bg: "bg-red-50", icon: <AlertTriangle size={12} className="text-red-700" /> };
         default:
-            return {
-                bg: "bg-gray-50",
-                icon: <Clock size={12} className="text-gray-500" />,
-            };
+            return { bg: "bg-gray-50", icon: <Clock size={12} className="text-gray-500" /> };
     }
 }
 
