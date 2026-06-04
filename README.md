@@ -1,138 +1,129 @@
 # SpringHotel
 
-Plateforme de réservation hôtelière sur Montpellier et sa région, avec une intégration Pastell pour la dématérialisation des dossiers de réservation.
+Application full-stack de réservation hôtelière sur Montpellier, avec une intégration complète du bus d'orchestration Pastell de Libriciel SCOP, une authentification OAuth2 / OpenID Connect via Keycloak, et une connexion sociale Google.
 
-Stack : Spring Boot 4.0, Java 21, React 18, Tailwind CSS, PostgreSQL, Flyway.
+**Stack :** Spring Boot 4 · Java 21 · React 18 · Tailwind CSS v4 · PostgreSQL · Flyway · Keycloak 26 · Docker · Railway · Netlify
+
+---
 
 ## Pourquoi ce projet
 
-SpringHotel est mon projet portfolio. Je l'ai construit pour démontrer une capacité à concevoir, structurer et faire évoluer une application full-stack non triviale, et pour préparer ma candidature au poste de DevRel chez Libriciel SCOP. C'est pour cette raison que j'y ai intégré Pastell, le produit phare de Libriciel : pour montrer que je sais lire une API, l'instrumenter, la documenter, et construire des partenaires d'intégration robustes autour.
+SpringHotel est mon projet portfolio. Il a été conçu pour démontrer une capacité à intégrer des systèmes hétérogènes, à documenter cette intégration pour plusieurs audiences, et à opérer une application en production.
 
-## Ce que l'application fait aujourd'hui
+L'intégration Pastell est au cœur du projet : le bus d'orchestration de Libriciel SCOP y est instrumenté comme il le serait dans un contexte réel de collectivité territoriale. Le mock Pastell que j'ai développé reproduit fidèlement l'API officielle (form-data en entrée, JSON en sortie, HTTP Basic, machine à états du document, journal d'événements), ce qui permet un développement et des tests d'intégration sans dépendre d'une instance Libriciel.
 
-Trois profils d'utilisateurs cohabitent.
+L'authentification OAuth2 / OpenID Connect via Keycloak a été ajoutée parce que c'est la technologie qu'utilise iparapheur v5 de Libriciel, et parce que la fiche de poste visée en fait une exigence explicite.
 
-Un visiteur peut consulter la liste des hôtels disponibles, les filtrer par prix, catégorie, équipements, les voir sur une carte interactive Leaflet centrée sur Montpellier, et accéder au détail de chaque chambre.
+---
 
-Un client connecté peut réserver une chambre pour une période donnée, recevoir un mail de confirmation, consulter l'historique de ses réservations, et les annuler.
+## Démo en ligne
 
-Un administrateur peut gérer les hôtels, chambres et utilisateurs via une API sécurisée.
+| Service | URL |
+|---|---|
+| Application principale | [hotel-montpellier.netlify.app](https://hotel-montpellier.netlify.app) |
+| Documentation intégration | [hotel-montpellier.netlify.app/admin/docs](https://hotel-montpellier.netlify.app/admin/docs) |
+| Dashboard Pastell | [pastell-demo.netlify.app](https://pastell-demo.netlify.app) |
 
-L'intégration Pastell, ajoutée par lots successifs, permet à chaque création de réservation de générer automatiquement un dossier dématérialisé côté Pastell, et inversement, de répercuter en temps quasi-réel sur la réservation Sejour les actions effectuées par un agent dans Pastell (validation, annulation, terminaison).
+**Compte de démonstration :** `demo@springhotel.fr` / `Malik971*` (lecture et réservation)
+
+**Connexion admin :** disponible via le formulaire ou via Keycloak (bouton dédié sur la page de connexion). La page `/admin/docs` est le point d'entrée recommandé pour comprendre l'architecture et l'intégration.
+
+---
+
+## Architecture déployée
+
+```
+hotel-montpellier.netlify.app
+        │
+        ▼
+sejour-backend-production.up.railway.app   ◄──►   keycloak-production-cfd1.up.railway.app
+        │                                                   (OAuth2 / OIDC / Google)
+        ▼
+ PostgreSQL Railway
+        │
+        ▼
+pastell-mock-production.up.railway.app
+```
+
+- Trois services Docker sur Railway : `sejour-backend`, `pastell-mock`, `keycloak`.
+- Base PostgreSQL Railway avec migrations Flyway automatiques au démarrage.
+- Frontend sur Netlify (build Vite), déclenché à chaque push sur `main`.
+- UptimeRobot sur `/actuator/health` et `/api/version.php` toutes les 5 minutes.
+
+---
+
+## Ce que l'application fait
+
+**Visiteur** : consultation des hôtels, filtres combinables (prix, catégorie, équipements), carte interactive Leaflet avec marqueurs GPS, détail chambre avec galerie d'images.
+
+**Client connecté** : réservation avec vérification de disponibilité, mail de confirmation, historique des séjours, annulation avec règle de délai.
+
+**Administrateur** : gestion des hôtels, chambres et utilisateurs. Tableau de bord de supervision du bus Pastell en temps réel : compteurs par étape circuit, journal d'événements, relance manuelle sur anomalie.
+
+**Authentification** : trois modes coexistent sur la même page de connexion. JWT maison (comptes locaux), Keycloak PKCE (flow Authorization Code avec code_challenge S256), et connexion directe Google via `kc_idp_hint`. Les deux derniers passent par le même Resource Server Spring Boot via un `CompositeJwtDecoder` qui dispatche selon le claim `iss`.
+
+---
 
 ## Architecture du dépôt
 
 ```
-springhotel/
+_WORKSPACE/
 ├── back-end/
-│   ├── sejour-backend/     application Spring Boot principale (port 8080)
-│   └── pastell-mock/       mock Pastell pour développement local (port 8090)
+│   ├── pom.xml                 parent Maven multi-module
+│   ├── sejour-backend/         Spring Boot principal (port 8080)
+│   ├── pastell-mock/           mock Pastell fidele a l'API reelle (port 8090)
+│   └── keycloak/
+│       ├── Dockerfile          image Keycloak avec realm pre-importe
+│       └── realm-export.json   realm springhotel (roles, scopes, client PKCE)
 │
-├── front-end/              React + Vite (port 5173)
-│
-└── dashboard/              dashboard HTML pour visualiser le flux Sejour ↔ Pastell
+└── front-end/                  React 18 + Vite + Tailwind CSS v4 (port 5173)
 ```
-
-Le projet est organisé en multi-module Maven. Le module `pastell-mock` reproduit fidèlement le comportement de l'API Pastell réelle pour permettre un développement local et des tests d'intégration sans dépendance externe.
-
-## Demo en ligne
-
-SpringHotel est deploye en production. Les trois URLs publiques :
-
-- **Application principale** : [hotel-montpellier.netlify.app](https://hotel-montpellier.netlify.app)
-  Compte demo lecture / reservation : `demo@springhotel.fr` / `Malik971*`
-- **Dashboard de demo integration Pastell** : [springhotel-pastell-dashboard.netlify.app](https://springhotel-pastell-dashboard.netlify.app)
-- **Page de status temps reel** : [springhotel-pastell-dashboard.netlify.app/status.html](https://springhotel-pastell-dashboard.netlify.app/status.html)
-
-### Architecture deployee
-
-```
-hotel-montpellier.netlify.app      ──►  springhotel-backend.onrender.com
-                                              │
-                                              ▼
-                                       PostgreSQL Render
-                                              │
-                                              ▼
-                                  springhotel-pastell-mock.onrender.com
-
-springhotel-pastell-dashboard
-    .netlify.app                  ──►  (les deux services Render)
-```
-
-- Deux services Render free tier (sejour-backend, pastell-mock) avec UptimeRobot pour eviter le cold start.
-- Base PostgreSQL Render avec migrations Flyway et seed Montpellier.
-- Frontend principal sur Netlify (build Vite).
-- Dashboard statique sur Netlify, sans build step.
-
-### Donnees disponibles
-
-- Cinq hotels fictifs a Montpellier (Le Peyrou, La Comedie, Antigone Plaza, Port Marianne, Les Pres d'Arenes), trois chambres chacun.
-- Compte demo pre-cree pour parcourir l'app sans s'inscrire.
-
-### Documentation associee
-
-- [DEPLOYMENT.md](./DEPLOYMENT.md) : guide pas a pas pour redeployer from scratch.
-- [DEMO_PUBLIQUE.md](./DEMO_PUBLIQUE.md) : posture securite et garde-fous (compte demo, rate limit, token).
-- [CREDENTIALS.md](./CREDENTIALS.md) : mecanisme de rotation des credentials Pastell par derivation HMAC.
-- [OBSERVABILITY.md](./OBSERVABILITY.md) : les trois couches d'observabilite (Actuator, endpoint custom, page HTML).
 
 ---
 
-## Notes sur l'integration de ce patch
+## L'intégration Pastell
 
-- Si le README a deja une section "Demo" ou "Production", merger plutot que dupliquer.
-- Les URLs `springhotel-backend.onrender.com` et `springhotel-pastell-mock.onrender.com` sont a remplacer si tu choisis d'autres noms de services Render.
-- Le schema ASCII est lisible directement sur GitHub. Si tu preferes un schema visuel, je peux generer un `architecture.svg` a la place.
+Développée par lots successifs, chacun ciblant une dimension précise de l'interopérabilité.
 
-## Demo hors-ligne et guide de développement local
+**Lot 1** : architecture multi-module Maven, séparation stricte Sejour / mock Pastell.
+
+**Lot 2** : mock Pastell avec endpoints `/api/v2/document` et `/api/v2/journal`, machine à états complète, authentification HTTP Basic, journal d'événements.
+
+**Lot 3** : synchronisation montante. Chaque création de réservation côté Sejour déclenche un événement `ReservationCreatedEvent` qui crée un dossier côté Pastell. Idempotence garantie.
+
+**Lot 4** : retry à deux niveaux. Premier niveau : tentative immédiate sur échec. Deuxième niveau : scheduler de reprise différée pour les dossiers en anomalie. Statuts `EN_RETRY` et `EN_ERREUR` visibles dans l'interface admin.
+
+**Lot 5** : synchronisation descendante. Sejour interroge `GET /api/v2/journal?since_id_j=N` toutes les 30 secondes. Un curseur persisté en base garantit qu'aucune entrée n'est traitée deux fois.
+
+**K1-K5** : intégration Keycloak. Infrastructure Docker (K1), Resource Server OAuth2 en coexistence avec le JWT maison via `CompositeJwtDecoder` (K2), JIT provisioning des utilisateurs Keycloak (K3), flow Authorization Code PKCE côté frontend en JavaScript natif sans dépendance externe (K4), documentation technique de l'intégration dans l'interface admin (K5).
+
+La documentation de chaque lot est disponible dans les fichiers `RETRY.md` et `POLLING.md` dans `sejour-backend`, et dans la page `/admin/docs` de l'application déployée.
+
+---
+
+## Développement local
 
 ### Prérequis
 
-Java 21, Node 18+, PostgreSQL 17, Maven 3.9+.
+Java 21, Node 18+, Maven 3.9+, Docker Desktop.
 
-Une base PostgreSQL nommée `hotel_db` doit exister localement. Pour la créer :
-
-```bash
-psql -U postgres -h localhost
-CREATE DATABASE hotel_db;
-\q
-```
-
-Flyway s'occupera de créer toutes les tables au premier démarrage.
-
-### Configuration des variables d'environnement
-
-Copie les fichiers d'exemple dans chaque module :
+### Démarrage rapide
 
 ```bash
-cp back-end/sejour-backend/.env.example back-end/sejour-backend/.env
-cp back-end/pastell-mock/.env.example back-end/pastell-mock/.env
-cp front-end/.env.example front-end/.env
-```
+# 1. Infrastructure (PostgreSQL + Keycloak)
+cd back-end
+./run-local.sh infra
 
-Édite chaque `.env` pour mettre tes valeurs locales (mot de passe Postgres, app password Gmail, etc.). Les `.env` ne sont pas commités, ils restent strictement locaux.
+# Attendre le message "Import finished successfully" dans les logs Keycloak
+docker compose logs -f keycloak
 
-### Lancer le mock Pastell
+# 2. Mock Pastell (terminal séparé)
+./run-local.sh mock
 
-```bash
-cd back-end/pastell-mock
-./mvnw spring-boot:run
-```
+# 3. Backend principal (terminal séparé)
+./run-local.sh backend
 
-Le mock écoute sur le port 8090.
-
-### Lancer le backend principal
-
-```bash
-cd back-end/sejour-backend
-./mvnw spring-boot:run
-```
-
-L'API est disponible sur `http://localhost:8080`.
-
-### Lancer le frontend React
-
-```bash
+# 4. Frontend (terminal séparé)
 cd front-end
 npm install
 npm run dev
@@ -140,75 +131,76 @@ npm run dev
 
 L'application est disponible sur `http://localhost:5173`.
 
-### Lancer le dashboard de démo
+### Variables d'environnement
+
+Copie les fichiers d'exemple :
 
 ```bash
-cd dashboard
-python -m http.server 5500
+cp _env.example _env
+cp back-end/sejour-backend/src/main/resources/application-local.properties.example \
+   back-end/sejour-backend/src/main/resources/application-local.properties
 ```
 
-Ouvre `http://localhost:5500` pour voir la visualisation en temps réel du flux entre Sejour et Pastell.
+Les variables critiques à renseigner sont `JWT_SECRET`, `PASTELL_MASTER_SECRET`, et les credentials PostgreSQL. Les fichiers `.env` et `application-local.properties` ne sont pas commités.
 
-## L'intégration Pastell en bref
+### Keycloak local
 
-L'intégration a été développée par lots successifs (5 lots à ce jour), chacun ciblant une dimension précise.
+Le realm `springhotel` est importé automatiquement au premier démarrage depuis `back-end/keycloak/realm-export.json`.
 
-Le **lot 1** a posé l'architecture multi-module Maven et la séparation claire entre Sejour et le mock Pastell.
+Comptes de démo Keycloak : `admin-demo` / `Admin1234!` et `user-demo` / `User1234!`.
 
-Le **lot 2** a construit le mock Pastell qui implémente fidèlement les endpoints `/api/v2/document` et `/api/v2/journal`, avec un workflow d'états et un système d'authentification HTTP Basic.
+Console d'administration : `http://localhost:8180/admin`.
 
-Le **lot 3** a câblé la synchronisation montante : à chaque création de réservation côté Sejour, un dossier est automatiquement créé côté Pastell.
+Pour réinitialiser le realm (après modification de `realm-export.json`) :
 
-Le **lot 4** a ajouté un système de retry à deux niveaux pour rendre la synchronisation montante robuste face aux pannes temporaires de Pastell. Premier niveau de retry court immédiat, deuxième niveau de reprise différée par scheduler.
+```bash
+cd back-end
+docker compose stop keycloak
+docker compose rm -f keycloak
+docker volume rm back-end_hotel_keycloak_data
+docker compose up -d keycloak
+```
 
-Le **lot 5** a fermé la boucle avec la synchronisation descendante : Sejour interroge le journal Pastell toutes les 30 secondes pour détecter les actions effectuées par un agent dans Pastell et les répercuter sur les réservations.
-
-La documentation technique de chaque lot se trouve dans le code, à proximité des fichiers concernés. Pour les lots 4 et 5, voir respectivement `back-end/sejour-backend/src/main/java/com/example/springhotel/integration/pastell/RETRY.md` et `POLLING.md`.
+---
 
 ## Conventions de développement
 
-Côté backend, un Controller ne parle jamais directement à un Repository. Toute logique passe par une couche Service. La seule exception qui demeure est `HotelController`, qui est un héritage des premiers sprints et est en cours de refactorisation.
+**Backend** : un Controller ne parle jamais directement à un Repository. Toute logique passe par une couche Service. Les variables métier sont nommées en français (`prixMoyenNuit`, `dateDebut`, `etapeCircuit`) parce que ce sont des concepts du domaine Pastell. Les utilitaires techniques restent en anglais.
 
-Côté frontend, les appels API ne se font jamais directement dans un composant Page. Ils passent par des fonctions exposées dans `services/` ou par des hooks personnalisés dans `hooks/`.
+**Frontend** : les appels API ne se font jamais directement dans un composant. Ils passent par des fonctions dans `services/` ou des hooks dans `hooks/`.
 
-Côté nommage, les variables métier sont en français (`prixMoyenNuit`, `dateDebut`, `nombrePersonnes`) parce que ce sont des concepts du domaine. Les utilitaires techniques restent en anglais (`handleSubmit`, `loading`, `useEffect`).
+**Commits** : conventional commits avec portée explicite. Exemples : `feat(pastell):`, `fix(auth):`, `feat(docs):`, `chore(infra):`.
 
-Côté commits, j'utilise les conventional commits avec une portée explicite : `feat(pastell): ...`, `fix(frontend): ...`, `docs(readme): ...`.
+**Vocabulaire Libriciel** appliqué dans le code et la documentation : `dossier` (pas `sync`), `etape circuit` (pas `status`), `anomalie` (pas `error`), `relancer` (pas `retry`), `bus d'orchestration` (pas `integration`).
 
-## État actuel et prochaines étapes
+---
 
-Ce qui fonctionne aujourd'hui :
+## État du projet
 
-- recherche d'hôtels par ville, dates, capacité ;
-- filtres combinables prix, catégorie, équipements ;
-- tri par prix, note, nom ;
-- vue carte interactive Leaflet avec marqueurs GPS ;
-- page détail hôtel avec slider d'images ;
-- système de réservation complet ;
-- espace client pour gérer ses réservations ;
-- panel admin pour les utilisateurs, hôtels, chambres ;
-- emails de confirmation via spring-boot-mail ;
-- migrations versionnées Flyway ;
-- intégration Pastell bidirectionnelle complète (5 lots).
+**Fonctionnel en production :**
 
-Ce qui est en cours ou prévu :
+- Recherche d'hôtels avec filtres combinables et carte Leaflet
+- Système de réservation complet avec règles d'annulation
+- Emails de confirmation via spring-boot-mail
+- Espace client et panel admin
+- Intégration Pastell bidirectionnelle (5 lots : création montante, retry, polling descendant)
+- Authentification OAuth2 / OpenID Connect via Keycloak (JWT maison en coexistence)
+- Connexion Google via Keycloak (kc_idp_hint)
+- Documentation technique d'intégration accessible sur `/admin/docs`
+- Environ 200 tests unitaires et d'intégration
+- Déploiement Docker sur Railway avec healthchecks
 
-- lot 6 d'observabilité avec Micrometer et un dashboard métriques ;
-- migration de l'authentification de session vers JWT stateless ;
-- documentation OpenAPI 3 / Swagger UI ;
-- recherche géospatiale par rayon en kilomètres ;
-- tests unitaires et d'intégration plus larges.
+**Non implémenté (identifié et assumé) :**
 
-## Ressources liées
+- Paiement réel
+- Email transactionnel (confirmation par Pastell)
+- OpenAPI / Swagger UI
+- Recherche géospatiale par rayon
 
-- Suivi du projet : [Trello](https://trello.com/b/9Iz00TDD/projet-hotel)
-- Diagrammes UML : [Drive](https://drive.google.com/file/d/1azgBVfcXhUdf6qLXU8zJQ5138nK52xJ-/view)
-- Maquettes : [Figma](https://www.figma.com/site/0BG3Y7PA3CXIIbPyeyrKhX/Projet-Hotel)
-- Document de cadrage : [Doc Mohamed et Malik](https://docs.google.com/document/d/1Lh5e2OUFWu4cGZceroKN7-JqxY0jcAA2zcEmHkMi7PE/edit)
+---
 
-## Contributeurs
+## Auteur
 
-- [Mohamed Benchrif](https://github.com/azerkane44)
-- [Malik Ibo](https://github.com/Malik971)
+[Malik Ibo](https://github.com/Malik971) - Concepteur Développeur d'Applications (Dawan, Montpellier)
 
-Voir les README spécifiques dans chaque sous-dossier pour le détail de chaque couche.
+Le projet a été initié dans le cadre d'une formation en binôme. Les lots d'intégration Pastell, l'infrastructure Keycloak et tous les développements depuis janvier 2026 sont l'œuvre de Malik Ibo seul.
