@@ -14,8 +14,9 @@ export default function CardHotel({ hotel, isSelected = false }) {
     const hotelSlug = makeHotelSlug(hotel);
 
     return (
-        <div
-            className={`group w-full bg-white rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col h-full ${
+        <Link
+            to={`/hotel/${hotelSlug}`}
+            className={`group w-full bg-white rounded-2xl overflow-hidden border transition-all duration-300 flex flex-col h-full cursor-pointer ${
                 isSelected
                     ? "border-[#0EA5E9] shadow-[0_0_0_2px_#0EA5E940]"
                     : "border-gray-100 hover:border-[#0EA5E9]/40 hover:shadow-lg hover:shadow-[#0EA5E9]/10"
@@ -72,7 +73,7 @@ export default function CardHotel({ hotel, isSelected = false }) {
                                         )}
                                     </>
                                 ) : (
-                                    <span className="text-xs text-gray-300">—</span>
+                                    <span className="text-xs text-gray-300">-</span>
                                 )}
                             </div>
                         </div>
@@ -100,18 +101,17 @@ export default function CardHotel({ hotel, isSelected = false }) {
                     <div className="leading-tight">
                         <p className="text-[10px] text-gray-400 uppercase tracking-wider">A partir de</p>
                         <p className="text-[#0369A1] font-bold text-base leading-none mt-0.5">
-                            {hotel.prixMoyenNuit ? `${hotel.prixMoyenNuit}€` : "—"}
+                            {hotel.prixMoyenNuit ? `${hotel.prixMoyenNuit}€` : "-"}
                             <span className="text-gray-400 text-xs font-normal">/nuit</span>
                         </p>
                     </div>
-                    <Link
-                        to={`/hotel/${hotelSlug}`}
+                    <span
                         className="bg-[#0EA5E9] hover:bg-[#0284C7] text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors duration-200 whitespace-nowrap"
                     >
                         Voir les chambres
-                    </Link>
+                    </span>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }

@@ -106,12 +106,12 @@ export default function HotelDetailsPage() {
 
             {/* Slider */}
             <div className="relative w-full mb-8">
-                <div className="relative h-[340px] md:h-[500px] w-full overflow-hidden bg-gray-200">
+                <div className="relative h-[280px] md:h-[720px] w-full overflow-hidden bg-gray-200">
                     <img
                         key={slides[currentSlide]}
                         src={slides[currentSlide]}
                         alt={`${hotel.nom} - vue ${currentSlide + 1}`}
-                        className="w-full h-full object-cover object-center block"
+                        className="w-full h-full object-cover object-end block"
                         style={{ imageRendering: "auto" }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />

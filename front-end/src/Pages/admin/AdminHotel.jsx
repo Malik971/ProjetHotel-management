@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { httpClient } from "../../api/httpClient";
 
-const EMPTY_FORM = { nom: "", adresse: "", ville: "", description: "", noteMoyenne: 0, prixMoyenNuit: 0, categorie: 3 };
+const EMPTY_FORM = { nom: "", adresse: "", ville: "", description: "", noteMoyenne: 0, prixMoyenNuit: 0, categorie: 3, latitude: null, longitude: null };
 
 /**
  * Page admin de gestion des hotels.
@@ -167,20 +167,20 @@ export default function AdminHotel() {
                                             <td className="px-4 py-3 text-sm text-gray-700">
                                                 <span className="inline-flex items-center gap-1">
                                                     <MapPin size={12} className="text-gray-400" />
-                                                    {h.ville || "—"}
+                                                    {h.ville || "-"}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-600">
-                                                {h.categorie ? `${h.categorie} étoiles` : "—"}
+                                                {h.categorie ? `${h.categorie} étoiles` : "-"}
                                             </td>
                                             <td className="px-4 py-3 text-sm">
                                                 <span className="inline-flex items-center gap-1">
                                                     <Star size={12} className="text-[#F59E0B] fill-[#F59E0B]" />
-                                                    <span className="font-semibold text-gray-700">{h.noteMoyenne || "—"}</span>
+                                                    <span className="font-semibold text-gray-700">{h.noteMoyenne || "-"}</span>
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-sm font-semibold text-[#0369A1]">
-                                                {h.prixMoyenNuit ? `${h.prixMoyenNuit}€` : "—"}
+                                                {h.prixMoyenNuit ? `${h.prixMoyenNuit}€` : "-"}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
@@ -276,6 +276,24 @@ function HotelFormCard({ hotel, onSubmit, onCancel }) {
                     <input type="text" value={form.adresse} onChange={(e) => update("adresse", e.target.value)}
                         className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#0EA5E9]" />
                 </Field>
+
+                {/* Coordonnees GPS (zone Montpellier Metropole) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Field label="Latitude (43.55 a 43.70)">
+                        <input type="number" step="0.0001" min="43.55" max="43.70"
+                            placeholder="ex: 43.6112"
+                            value={form.latitude ?? ""}
+                            onChange={(e) => update("latitude", e.target.value === "" ? null : parseFloat(e.target.value))}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#0EA5E9]" />
+                    </Field>
+                    <Field label="Longitude (3.75 a 4.05)">
+                        <input type="number" step="0.0001" min="3.75" max="4.05"
+                            placeholder="ex: 3.8703"
+                            value={form.longitude ?? ""}
+                            onChange={(e) => update("longitude", e.target.value === "" ? null : parseFloat(e.target.value))}
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#0EA5E9]" />
+                    </Field>
+                </div>
 
                 <div className="grid grid-cols-3 gap-3">
                     <Field label="Categorie (étoiles)">

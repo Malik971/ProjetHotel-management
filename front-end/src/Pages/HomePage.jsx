@@ -173,7 +173,7 @@ export default function HomePage() {
           {/* Layout sidebar + contenu */}
           <div className="flex gap-6">
 
-            {/* Sidebar filtres — desktop */}
+            {/* Sidebar filtres - desktop */}
             <div className="w-72 flex-shrink-0" style={{ display: 'none' }}
                  ref={el => { if (el && window.innerWidth >= 768) el.style.display = 'block'; }}>
               <Filter
@@ -182,7 +182,7 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Drawer filtres — mobile */}
+            {/* Drawer filtres - mobile */}
             {mobileFilterOpen && (
                 <div className="fixed inset-0 z-50 md:hidden">
                   <div
