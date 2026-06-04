@@ -1,6 +1,7 @@
 /**
  * keycloak.js
- * Module qui encapsule keycloak-js pour le flow Authorization Code + PKCE.
+ * Module qui encapsule le flow Authorization Code + PKCE (sans keycloak-js,
+ * implementation native via Web Crypto API).
  *
  * Pourquoi ce fichier existe :
  *   AuthContext gere l'etat React (user, loading, isAdmin...).
@@ -8,22 +9,17 @@
  *   refresh de token. On separe les deux responsabilites pour ne pas
  *   transformer AuthContext en fichier de 300 lignes.
  *
- * Flow Authorization Code PKCE (ce qui se passe quand on clique "Se connecter avec Keycloak") :
- *   1. loginWithKeycloak() redirige le navigateur vers Keycloak
- *      (http://localhost:8180/realms/springhotel/protocol/openid-connect/auth
- *       ?client_id=springhotel-frontend
- *       &redirect_uri=http://localhost:5173/Connexion
- *       &response_type=code
- *       &scope=openid profile email
- *       &code_challenge=<hash PKCE>
- *       &code_challenge_method=S256)
- *   2. L'utilisateur saisit ses identifiants sur la page Keycloak
- *   3. Keycloak redirige vers http://localhost:5173/Connexion?code=...&state=...
- *   4. handleKeycloakCallback() detecte ce code dans l'URL,
- *      echange le code contre un access_token via POST /token,
- *      stocke le token sous la cle sejour_token (meme cle que le JWT maison),
- *      supprime le code de l'URL pour ne pas le rejouer.
+ * Flow Authorization Code PKCE (clic "Se connecter avec Keycloak") :
+ *   1. loginWithKeycloak() redirige le navigateur vers Keycloak.
+ *   2. L'utilisateur s'authentifie (formulaire Keycloak ou fournisseur externe).
+ *   3. Keycloak redirige vers REDIRECT_URI?code=...&state=...
+ *   4. handleKeycloakCallback() echange le code contre un access_token.
  *   5. AuthContext appelle /api/me avec ce token pour recuperer le profil.
+ *
+ * Connexion directe via un fournisseur externe (Google) :
+ *   loginWithKeycloak(scope, 'google') ajoute le parametre kc_idp_hint=google
+ *   a l'URL d'autorisation. Keycloak saute alors sa propre page de login et
+ *   redirige directement vers Google. Le reste du flow PKCE est identique.
  *
  * Pourquoi PKCE (Proof Key for Code Exchange) :
  *   Le client est public (pas de secret cote navigateur). Sans PKCE, un
@@ -91,7 +87,7 @@ function base64urlEncode(array) {
 
 /**
  * Genere un state aleatoire pour proteger contre les attaques CSRF.
- * Le state est envoye a Keycloak et renvoyé tel quel dans la redirection retour.
+ * Le state est envoye a Keycloak et renvoye tel quel dans la redirection retour.
  * On verifie qu'il correspond au state qu'on avait genere.
  */
 function generateState() {
@@ -110,8 +106,12 @@ function generateState() {
  * Apres connexion reussie, Keycloak redirige vers REDIRECT_URI?code=...
  *
  * @param {string} scope - Scopes OAuth2 demandes (ex: 'openid' ou 'openid pastell-admin')
+ * @param {string|null} idpHint - Identifiant d'un fournisseur externe a cibler
+ *   directement (ex: 'google'). Quand fourni, Keycloak saute sa propre page de
+ *   login et redirige immediatement vers ce fournisseur via kc_idp_hint.
+ *   Quand null ou absent, comportement standard (page de login Keycloak).
  */
-export async function loginWithKeycloak(scope = 'openid pastell-admin') {
+export async function loginWithKeycloak(scope = 'openid pastell-admin', idpHint = null) {
     const verifier = generateCodeVerifier();
     const challenge = await generateCodeChallenge(verifier);
     const state = generateState();
@@ -130,6 +130,12 @@ export async function loginWithKeycloak(scope = 'openid pastell-admin') {
     authUrl.searchParams.set('code_challenge', challenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('state', state);
+
+    // Ciblage direct d'un fournisseur externe (ex: Google).
+    // Keycloak interprete kc_idp_hint et court-circuite sa page de login.
+    if (idpHint) {
+        authUrl.searchParams.set('kc_idp_hint', idpHint);
+    }
 
     window.location.href = authUrl.toString();
 }

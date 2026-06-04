@@ -37,7 +37,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Toaster position="top-center" richColors closeButton duration={4000} />
+        <Toaster position="top-center" richColors closeButton duration={3000} />
 
         <Routes>
           {/* Pages AVEC layout (navbar) */}

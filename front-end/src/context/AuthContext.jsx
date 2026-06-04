@@ -145,9 +145,9 @@ export function AuthProvider({ children }) {
      * @param {string} scope - Scopes demandes. 'openid profile email' par defaut.
      *   Passer 'openid profile email pastell-admin' pour les admins Pastell.
      */
-    const loginWithKeycloak = useCallback(async (scope = 'openid profile email') => {
+    const loginWithKeycloak = useCallback(async (scope = 'openid pastell-admin', idpHint = null) => {
         try {
-            await keycloakLogin(scope);
+            await keycloakLogin(scope, idpHint);
             // Pas de return : la fonction redirige le navigateur,
             // le code apres cette ligne ne s'execute jamais.
         } catch (err) {

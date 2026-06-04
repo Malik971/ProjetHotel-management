@@ -7,22 +7,23 @@ import { useAuth } from "../hooks/useAuth";
 /**
  * Page de connexion.
  *
- * Evolution Lot K4 : deux modes de connexion coexistent sur la meme page.
+ * Trois modes de connexion coexistent sur la meme page.
  *
  * Mode 1 : JWT maison (formulaire email + mot de passe).
  *   Appelle login(email, password) depuis AuthContext.
- *   Identique au comportement pre-Keycloak.
  *
  * Mode 2 : Keycloak PKCE (bouton "Se connecter avec Keycloak").
- *   Appelle loginWithKeycloak() depuis AuthContext.
- *   Redirige le navigateur vers Keycloak, qui redirige en retour vers cette
- *   meme page avec ?code=... dans l'URL.
- *   Le useEffect dans AuthProvider detecte ce code et l'echange contre un token.
- *   Une fois le token stocke, AuthProvider appelle /api/me et pose le user
- *   dans le context. Ce composant detecte alors isAuthenticated et redirige.
+ *   Appelle loginWithKeycloak() qui redirige vers la page de login Keycloak.
+ *   Sur cette page, les fournisseurs externes configures (Google) apparaissent
+ *   aussi, l'utilisateur a donc le choix.
  *
- * Le bouton Keycloak est place apres le separateur existant, a la place
- * du lien "Pas encore de compte ?" qui est deplace en dessous.
+ * Mode 3 : Google direct (bouton "Continuer avec Google").
+ *   Appelle loginWithKeycloak('openid pastell-admin', 'google').
+ *   Le parametre kc_idp_hint=google fait que Keycloak saute sa propre page
+ *   de login et redirige immediatement vers Google. Plus court d'un clic.
+ *
+ * Les trois modes aboutissent au meme etat : un token stocke sous sejour_token,
+ * puis /api/me appele par AuthProvider pour recuperer le profil.
  */
 export default function ConnexionUser() {
     const [email, setEmail] = useState("");
@@ -30,6 +31,7 @@ export default function ConnexionUser() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [keycloakLoading, setKeycloakLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState("");
 
     const { login, loginWithKeycloak, isAuthenticated, isAdmin, loading: authLoading } = useAuth();
@@ -40,8 +42,6 @@ export default function ConnexionUser() {
 
     /**
      * Redirection automatique apres que AuthProvider a traite le callback Keycloak.
-     * Quand AuthProvider pose le user (isAuthenticated passe a true), on redirige.
-     * Sans ce useEffect, l'utilisateur resterait sur /Connexion apres le retour Keycloak.
      */
     useEffect(() => {
         if (!authLoading && isAuthenticated) {
@@ -55,7 +55,6 @@ export default function ConnexionUser() {
 
     /**
      * Soumission du formulaire JWT maison.
-     * Inchange par rapport au Lot 1.
      */
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -78,14 +77,10 @@ export default function ConnexionUser() {
     };
 
     /**
-     * Connexion via Keycloak PKCE.
-     * Appelle loginWithKeycloak() qui redirige le navigateur.
-     * Le loading reste actif jusqu'a la redirection (pas de retour possible).
+     * Connexion via la page de login Keycloak (formulaire + fournisseurs externes).
      */
     const handleKeycloakLogin = async () => {
         setKeycloakLoading(true);
-        // La fonction redirige le navigateur, setKeycloakLoading(false) ne s'execute pas.
-        // On le garde quand meme pour le cas ou la redirection echoue.
         try {
             await loginWithKeycloak('openid pastell-admin');
         } catch {
@@ -93,6 +88,22 @@ export default function ConnexionUser() {
             setError("Impossible de contacter Keycloak. Verifiez que le serveur est demarre.");
         }
     };
+
+    /**
+     * Connexion directe via Google (kc_idp_hint=google).
+     * Keycloak saute sa page de login et redirige immediatement vers Google.
+     */
+    const handleGoogleLogin = async () => {
+        setGoogleLoading(true);
+        try {
+            await loginWithKeycloak('openid pastell-admin', 'google');
+        } catch {
+            setGoogleLoading(false);
+            setError("Impossible de contacter Keycloak. Verifiez que le serveur est demarre.");
+        }
+    };
+
+    const anyLoading = loading || keycloakLoading || googleLoading;
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
@@ -184,7 +195,7 @@ export default function ConnexionUser() {
                             {/* Bouton JWT maison */}
                             <button
                                 type="submit"
-                                disabled={loading || keycloakLoading}
+                                disabled={anyLoading}
                                 className="w-full bg-[#0EA5E9] hover:bg-[#0284C7] disabled:bg-gray-300 text-white py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm"
                             >
                                 {loading ? "Connexion..." : "Se connecter"}
@@ -198,14 +209,31 @@ export default function ConnexionUser() {
                             <div className="flex-1 h-px bg-gray-100" />
                         </div>
 
+                        {/* Bouton Google direct (kc_idp_hint=google) */}
+                        <button
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            disabled={anyLoading}
+                            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 disabled:bg-gray-100 border border-gray-200 hover:border-gray-300 text-gray-700 py-3 rounded-xl font-semibold text-sm transition-all shadow-sm mb-3"
+                        >
+                            {/* Logo Google officiel quatre couleurs */}
+                            <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                                <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/>
+                                <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                                <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                            </svg>
+                            {googleLoading ? "Redirection vers Google..." : "Continuer avec Google"}
+                        </button>
+
                         {/* Bouton Keycloak */}
                         <button
                             type="button"
                             onClick={handleKeycloakLogin}
-                            disabled={loading || keycloakLoading}
+                            disabled={anyLoading}
                             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 disabled:bg-gray-100 border border-gray-200 hover:border-[#0EA5E9] text-gray-700 py-3 rounded-xl font-semibold text-sm transition-all shadow-sm"
                         >
-                            {/* Icone Keycloak : cadenas ouvert, symbole du SSO */}
+                            {/* Icone Keycloak : cadenas, symbole du SSO */}
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M12 2C8.13 2 5 5.13 5 9v1H4c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2h-1V9c0-3.87-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5v1H7V9c0-2.76 2.24-5 5-5zm0 9c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" fill="#0EA5E9"/>
                             </svg>
@@ -214,7 +242,7 @@ export default function ConnexionUser() {
 
                         {/* Note explicative pour les comptes Keycloak */}
                         <p className="text-center text-xs text-gray-400 mt-3">
-                            Comptes Keycloak locaux : admin-demo / user-demo
+                            Comptes Keycloak de demo : admin-demo / user-demo
                         </p>
 
                         {/* Separateur inscription */}
