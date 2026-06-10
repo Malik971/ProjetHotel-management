@@ -1,4 +1,4 @@
-# Backend — Spring Boot API
+# Backend - Spring Boot API
 
 > `src/main/java/com/example/springhotel/`
 
@@ -25,7 +25,7 @@ Un Controller qui appelle directement un Repository est une **dette technique** 
 
 ---
 
-## `entity/` — Le modèle de données
+## `entity/` - Le modèle de données
 
 Ce sont les classes mappées sur les tables MySQL via JPA/Hibernate.
 
@@ -53,7 +53,7 @@ Système de sécurité à 3 niveaux : un User a des Roles, un Role a des Privile
 
 ---
 
-## `controller/` — Les points d'entrée HTTP
+## `controller/` - Les points d'entrée HTTP
 
 Chaque Controller expose un groupe de routes REST.
 
@@ -94,7 +94,7 @@ Valide email, longueur password, unicité. Encode le password (BCrypt). Assigne 
 
 ---
 
-## `dto/` — Les objets de transfert
+## `dto/` - Les objets de transfert
 
 Les DTOs séparent la représentation API du modèle interne.
 
