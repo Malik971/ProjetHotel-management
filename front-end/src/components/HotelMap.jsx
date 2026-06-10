@@ -37,21 +37,6 @@ function MapFocus({ hotels, selectedHotelId }) {
   return null;
 }
 
-function renderStars(categorie = 0) {
-  const maxStars = 5;
-  let stars = "";
-
-  for (let i = 1; i <= maxStars; i++) {
-    if (i <= categorie) {
-      stars += "★"; // pleine
-    } else {
-      stars += "☆"; // vide
-    }
-  }
-
-  return stars;
-}
-
 // Composant principal — reçoit uniquement des props, n'a aucun état propre
 export default function HotelMap({ hotels = [], onHotelClick, selectedHotelId }) {
   // Filtrer les hôtels sans coordonnées GPS

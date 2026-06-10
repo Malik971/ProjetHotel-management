@@ -197,9 +197,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/chambres/**").hasAnyRole("ADMIN", "EMPLOYE")
                         .requestMatchers(HttpMethod.PUT, "/api/chambres/**").hasAnyRole("ADMIN", "EMPLOYE")
 
-                        // Ancien espace employe dedie (conserve si reutilise)
-                        .requestMatchers("/api/employe/**").hasRole("EMPLOYE")
-
                         // Reste de l'espace admin (GET, POST, PUT) : ADMIN ou EMPLOYE.
                         // Les DELETE sous /api/admin/** ont deja ete capturees ci-dessus
                         // et restent reservees a ADMIN.

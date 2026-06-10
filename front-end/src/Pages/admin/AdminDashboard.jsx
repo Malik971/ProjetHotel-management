@@ -311,6 +311,7 @@ export default function AdminDashboard() {
     );
 }
 
+// eslint-disable-next-line no-unused-vars -- faux positif : Icon est rendu en JSX plus bas
 function AdminQuickCard({ icon: Icon, title, subtitle, onClick, disabled }) {
     const baseClass = "bg-white border rounded-2xl p-4 shadow-sm transition-all text-left";
     if (disabled) {

@@ -7,7 +7,6 @@ import {
     Calendar, Star
 } from "lucide-react";
 import { getChambreById } from "../services/chambreService";
-import { creerReservation } from "../services/reservationService";
 import { extractHotelIdFromSlug } from "../utils/slugify";
 import { useAuth } from "../hooks/useAuth";
 import DateRangePicker, { toISO, formatRange } from "../components/DateRangePicker";
@@ -47,20 +46,13 @@ function calculerNuits(dateDebut, dateFin) {
     return diff > 0 ? diff : 0;
 }
 
-function formatDateFr(iso) {
-    if (!iso) return "";
-    return new Intl.DateTimeFormat("fr-FR", {
-        day: "numeric", month: "long", year: "numeric",
-    }).format(new Date(iso));
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Galerie style Booking
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ChambreGallery({ images }) {
     const [activeIdx, setActiveIdx] = useState(0);
-    const [lightbox, setLightbox] = useState(false);
+    const [, setLightbox] = useState(false);
 
     const prev = () => setActiveIdx((i) => (i - 1 + images.length) % images.length);
     const next = () => setActiveIdx((i) => (i + 1) % images.length);
@@ -105,7 +97,6 @@ function ChambreGallery({ images }) {
                 {/* 2 photos secondaires empilees (masquees sur mobile) */}
                 <div className="hidden md:flex flex-col gap-2">
                     {secondary.map((img, i) => {
-                        const realIdx = images.findIndex((x) => x === img && images.indexOf(x) !== activeIdx);
                         return (
                             <div key={i} className="flex-1 relative group cursor-pointer overflow-hidden"
                                 onClick={() => setActiveIdx(images.indexOf(img))}>
@@ -151,7 +142,7 @@ function ChambreGallery({ images }) {
 
 function ChambreReservationCard({ chambre, hotel, hotelSlug }) {
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);

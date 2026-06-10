@@ -1,6 +1,6 @@
 // src/Pages/MonProfilPage.jsx
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { User, Mail, Phone, Lock, Eye, EyeOff, ArrowLeft, Save } from "lucide-react";
 import { toast } from "sonner";
 import { httpClient } from "../api/httpClient";
@@ -21,7 +21,6 @@ import { useAuth } from "../hooks/useAuth";
  */
 export default function MonProfilPage() {
     const { user } = useAuth();
-    const navigate = useNavigate();
 
     const [form, setForm] = useState({
         firstName: "",
