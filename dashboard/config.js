@@ -19,11 +19,11 @@
  * pas a empecher un attaquant determine. Voir DEMO_PUBLIQUE.md.
  */
 window.SPRINGHOTEL_CONFIG = {
-  // URL du backend principal sejour-backend deploye sur Render.
-  backendUrl: "https://projethotel-management.onrender.com",
+  // URL du backend principal sejour-backend deploye sur Railway.
+  backendUrl: "https://sejour-backend-production.up.railway.app",
 
-  // URL du mock Pastell deploye sur Render (service separe).
-  mockUrl: "https://springhotel-pastell-mock.onrender.com",
+  // URL du mock Pastell deploye sur Railway (service separe).
+  mockUrl: "https://pastell-mock-production.up.railway.app",
 
   // Token envoye sur le header X-Demo-Token pour les operations destructives
   // (typiquement le bouton "forcer un poll" du dashboard).

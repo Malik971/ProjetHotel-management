@@ -18,8 +18,8 @@
   # Variables injectees au moment du deploy.
   # Voir dashboard/config.js qui les lit via une convention SPRINGHOTEL_*.
   # Defaut en clair ici ; surcharger via le panneau Netlify "Site settings -> Environment".
-  SPRINGHOTEL_BACKEND_URL = "https://springhotel-backend.onrender.com"
-  SPRINGHOTEL_MOCK_URL = "https://springhotel-pastell-mock.onrender.com"
+  SPRINGHOTEL_BACKEND_URL = "https://sejour-backend-production.up.railway.app"
+  SPRINGHOTEL_MOCK_URL = "https://pastell-mock-production.up.railway.app"
 
 # Headers HTTP : CSP minimaliste, cache court sur les fichiers de config
 # pour pouvoir basculer rapidement les URLs sans redeploy.

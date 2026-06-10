@@ -210,8 +210,4 @@ docker compose up -d keycloak
 
 [Malik Ibo](https://github.com/Malik971) - Concepteur Développeur d'Applications (Dawan, Montpellier)
 
-<<<<<<< HEAD
 Le projet a été initié dans le cadre d'une formation en binôme. Les lots d'intégration Pastell, l'infrastructure Keycloak et tous les développements depuis janvier 2026 sont l'œuvre de Malik Ibo seul.
-=======
-Le projet a été initié dans le cadre d'une formation en binôme. Les lots d'intégration Pastell, l'infrastructure Keycloak et tous les développements depuis janvier 2026 sont l'œuvre de Malik Ibo seul.
->>>>>>> b6872a8d271d757da0f8a8f1e42546b99c6979ea
