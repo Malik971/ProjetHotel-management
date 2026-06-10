@@ -16,6 +16,18 @@ Ce compte est cree automatiquement au demarrage par `SetupDataLoader`, de manier
 
 Un visiteur qui veut faire le tour des fonctionnalites lit le mot de passe sur la page d'accueil, se connecte, simule une reservation, voit le polling reagir.
 
+## Compte employe de demo
+
+Pour faire visiter l'espace d'administration sans risque, un second compte fixe est expose.
+
+* Email : `employe@springhotel.fr`
+* Mot de passe : `Employe971*`
+* Roles : `ROLE_EMPLOYE` + `ROLE_USER`
+
+Ce compte donne acces a tout l'espace admin (tableau de bord Pastell, gestion des hotels, chambres et utilisateurs, relance manuelle du bus) en lecture, creation et modification, mais PAS en suppression. Les boutons supprimer sont masques cote frontend, et le backend refuse de toute facon tout `DELETE` provenant d'un non-admin (voir `SecurityConfig`). Un visiteur peut donc tout explorer et tout modifier sans pouvoir casser le jeu de donnees de demo.
+
+Comme le compte demo client, il est cree au demarrage par `SetupDataLoader` de maniere idempotente. Il existe aussi en version Keycloak (`employe-demo` / `Employe1234!`) pour la connexion via le bouton Keycloak.
+
 ## Token administrateur sur les operations destructives
 
 Le endpoint `POST /api/admin/pastell/poll`, qui force un tick de polling Pastell, est protege par un header :

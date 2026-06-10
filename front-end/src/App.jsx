@@ -30,9 +30,6 @@ import AdminPastellList from "./Pages/admin/AdminPastellList";
 import AdminPastellDetail from "./Pages/admin/AdminPastellDetail";
 import ProtectedRoute from "./components/ProtectedRoute";
 
-// EMPLOYE
-import EmployeDashboard from "./Pages/employe/EmployeDashboard";
-
 function App() {
   return (
     <BrowserRouter>
@@ -89,7 +86,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
                 <AdminDashboard />
               </ProtectedRoute>
             }
@@ -97,7 +94,7 @@ function App() {
           <Route
             path="/admin/docs"
             element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
                 <AdminDocs />
               </ProtectedRoute>
             }
@@ -105,7 +102,7 @@ function App() {
           <Route
             path="/admin/pastell"
             element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
                 <AdminPastellList />
               </ProtectedRoute>
             }
@@ -113,7 +110,7 @@ function App() {
           <Route
             path="/admin/pastell/:reservationId"
             element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
                 <AdminPastellDetail />
               </ProtectedRoute>
             }
@@ -121,7 +118,7 @@ function App() {
           <Route
             path="/admin/add-users"
             element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
                 <AdminUsers />
               </ProtectedRoute>
             }
@@ -129,7 +126,7 @@ function App() {
           <Route
             path="/admin/hotels"
             element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
                 <AdminHotel />
               </ProtectedRoute>
             }
@@ -137,18 +134,8 @@ function App() {
           <Route
             path="/admin/chambres"
             element={
-              <ProtectedRoute roleRequired="ROLE_ADMIN">
-                <AdminChambres />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Employe */}
-          <Route
-            path="/employe"
-            element={
               <ProtectedRoute roleRequired="ROLE_EMPLOYE">
-                <EmployeDashboard />
+                <AdminChambres />
               </ProtectedRoute>
             }
           />

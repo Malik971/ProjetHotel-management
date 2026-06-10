@@ -101,6 +101,25 @@ public class SetupDataLoader implements ApplicationListener<ApplicationReadyEven
             log.info("SetupDataLoader : compte demo demo@springhotel.fr cree.");
         }
 
+        // Compte employe de demo (flux JWT maison, formulaire de connexion).
+        // Pendant equivalent du compte Keycloak employe-demo. ROLE_EMPLOYE donne
+        // l'acces lecture/modification a tout l'espace admin SAUF les suppressions
+        // (reservees a ROLE_ADMIN cote SecurityConfig). ROLE_USER lui permet en plus
+        // de reserver comme un client. Idempotent : non recree s'il existe deja.
+        if (userRepository.findByEmail("employe@springhotel.fr").isEmpty()) {
+            Role employeRole = roleRepository.findByName("ROLE_EMPLOYE");
+            Role userRole = roleRepository.findByName("ROLE_USER");
+            Users employe = new Users();
+            employe.setFirstName("Employe");
+            employe.setLastName("Demo");
+            employe.setPassword(passwordEncoder.encode("Employe971*"));
+            employe.setEmail("employe@springhotel.fr");
+            employe.setRoles(Arrays.asList(employeRole, userRole));
+            employe.setEnabled(true);
+            userRepository.save(employe);
+            log.info("SetupDataLoader : compte employe employe@springhotel.fr cree.");
+        }
+
         alreadySetup = true;
     }
 

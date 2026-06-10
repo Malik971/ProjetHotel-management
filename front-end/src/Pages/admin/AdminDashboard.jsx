@@ -11,6 +11,7 @@ import {
 import StatusBadge from "../../components/admin/StatusBadge";
 import StatCard from "../../components/admin/StatCard";
 import OrchestrationDiagram from "../../components/admin/OrchestrationDiagram";
+import EmployeModeBanner from "../../components/admin/EmployeModeBanner";
 import {
     getPastellStatus,
     getRecentActivity,
@@ -137,6 +138,8 @@ export default function AdminDashboard() {
                         {busEnService ? "Bus en service" : "Bus indisponible"}
                     </span>
                 </div>
+
+                <EmployeModeBanner />
 
                 {/* 4 compteurs Pastell */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

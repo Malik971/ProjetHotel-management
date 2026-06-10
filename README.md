@@ -24,7 +24,14 @@ L'authentification OAuth2 / OpenID Connect via Keycloak a été ajoutée parce q
 | Documentation intégration | [hotel-montpellier.netlify.app/admin/docs](https://hotel-montpellier.netlify.app/admin/docs) |
 | Dashboard Pastell | [pastell-demo.netlify.app](https://pastell-demo.netlify.app) |
 
-**Compte de démonstration :** `demo@springhotel.fr` / `Malik971*` (lecture et réservation)
+**Comptes de démonstration (formulaire JWT maison) :**
+
+| Compte | Identifiants | Accès |
+|---|---|---|
+| Client | `demo@springhotel.fr` / `Malik971*` | Lecture catalogue + réservation |
+| Employé | `employe@springhotel.fr` / `Employe971*` | Tout l'espace admin **sauf suppressions** (lecture + création + modification) |
+
+L'employé est l'idéal pour faire visiter l'espace d'administration sans risque : il voit le tableau de bord Pastell, gère hôtels/chambres/utilisateurs et relance le bus, mais ne peut rien supprimer (boutons masqués + refus serveur).
 
 **Connexion admin :** disponible via le formulaire ou via Keycloak (bouton dédié sur la page de connexion). La page `/admin/docs` est le point d'entrée recommandé pour comprendre l'architecture et l'intégration.
 
@@ -147,7 +154,7 @@ Les variables critiques à renseigner sont `JWT_SECRET`, `PASTELL_MASTER_SECRET`
 
 Le realm `springhotel` est importé automatiquement au premier démarrage depuis `back-end/keycloak/realm-export.json`.
 
-Comptes de démo Keycloak : `admin-demo` / `Admin1234!` et `user-demo` / `User1234!`.
+Comptes de démo Keycloak : `admin-demo` / `Admin1234!`, `employe-demo` / `Employe1234!` et `user-demo` / `User1234!`.
 
 Console d'administration : `http://localhost:8180/admin`.
 

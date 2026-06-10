@@ -38,6 +38,9 @@ import {
 } from "lucide-react";
 
 import { httpClient } from "../../api/httpClient";
+import { useAuth } from "../../hooks/useAuth";
+import EmployeModeBanner from "../../components/admin/EmployeModeBanner";
+import DeleteButton from "../../components/admin/DeleteButton";
 
 const ROLE_OPTIONS = [
     { value: "USER", label: "Utilisateur" },
@@ -56,6 +59,10 @@ const EMPTY_FORM = {
 
 export default function AdminUsers() {
     const navigate = useNavigate();
+    // Seul un ADMIN peut supprimer un utilisateur. L'employe voit la liste et
+    // peut en creer, mais le bouton supprimer lui est masque (et le backend
+    // refuse de toute facon le DELETE /api/admin/users/{id} non-ADMIN).
+    const { isAdmin } = useAuth();
 
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -154,6 +161,8 @@ export default function AdminUsers() {
                     </div>
                 </div>
 
+                <EmployeModeBanner />
+
                 {/* Barre d'action */}
                 <div className="mb-4 flex justify-end">
                     <button
@@ -208,6 +217,7 @@ export default function AdminUsers() {
                                         <UserRow
                                             key={u.id}
                                             user={u}
+                                            canDelete={isAdmin}
                                             onDelete={() => setDeleteTarget(u)}
                                         />
                                     ))}
@@ -264,7 +274,7 @@ function Td({ children, className = "" }) {
 /**
  * Une ligne du tableau utilisateurs.
  */
-function UserRow({ user, onDelete }) {
+function UserRow({ user, onDelete, canDelete }) {
     const fullName = [user.firstName, user.lastName]
         .filter(Boolean)
         .join(" ")
@@ -317,13 +327,11 @@ function UserRow({ user, onDelete }) {
                 )}
             </Td>
             <Td className="text-right">
-                <button
-                    onClick={onDelete}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition"
-                >
-                    <Trash2 size={12} />
-                    Supprimer
-                </button>
+                <DeleteButton
+                    variant="labeled"
+                    canDelete={canDelete}
+                    onDelete={onDelete}
+                />
             </Td>
         </tr>
     );

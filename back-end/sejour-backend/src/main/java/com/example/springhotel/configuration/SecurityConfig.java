@@ -170,22 +170,40 @@ public class SecurityConfig {
                         // Fichiers statiques uploades
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // Endpoints Pastell : exigent desormais le scope pastell-admin
-                        // (token Keycloak avec scope optionnel pastell-admin demande
-                        // explicitement par le client lors du login).
-                        // Lot K2 : le dashboard pastell-demo.netlify.app ne fonctionnera
-                        // plus sans Keycloak. En local, utiliser le compte admin-demo
-                        // avec scope pastell-admin.
+                        // Endpoints Pastell : status + poll.
+                        // Le scope Keycloak pastell-admin reste accepte, mais on
+                        // ouvre aussi a ROLE_ADMIN et ROLE_EMPLOYE pour que le compte
+                        // employe-demo puisse superviser le bus depuis le dashboard
+                        // admin (lecture des compteurs + relance manuelle) sans avoir
+                        // a demander le scope pastell-admin.
                         .requestMatchers(HttpMethod.GET, "/api/admin/pastell/status")
-                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN")
+                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN", "ROLE_EMPLOYE")
                         .requestMatchers(HttpMethod.POST, "/api/admin/pastell/poll")
-                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN")
+                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN", "ROLE_EMPLOYE")
 
-                        // Routes employe
+                        // Suppressions reservees aux administrateurs : un employe ne
+                        // supprime JAMAIS (ni hotel, ni chambre, ni utilisateur).
+                        // Ces regles DELETE sont placees AVANT les regles d'ecriture
+                        // et avant la regle generale /api/admin/** : l'ordre compte,
+                        // le premier matcher qui matche gagne.
+                        .requestMatchers(HttpMethod.DELETE, "/api/hotels/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/chambres/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/admin/**").hasRole("ADMIN")
+
+                        // Ecritures catalogue (creation, modification) : ADMIN ou EMPLOYE.
+                        // POST /api/hotels/search reste public (matche plus haut).
+                        .requestMatchers(HttpMethod.POST, "/api/hotels/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.PUT, "/api/hotels/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.POST, "/api/chambres/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.PUT, "/api/chambres/**").hasAnyRole("ADMIN", "EMPLOYE")
+
+                        // Ancien espace employe dedie (conserve si reutilise)
                         .requestMatchers("/api/employe/**").hasRole("EMPLOYE")
 
-                        // Routes admin
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Reste de l'espace admin (GET, POST, PUT) : ADMIN ou EMPLOYE.
+                        // Les DELETE sous /api/admin/** ont deja ete capturees ci-dessus
+                        // et restent reservees a ADMIN.
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "EMPLOYE")
 
                         // Reservation : il faut etre logue
                         .requestMatchers(HttpMethod.POST, "/api/reservations").authenticated()

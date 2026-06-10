@@ -111,6 +111,16 @@
       "lastName": "Demo",
       "credentials": [{ "type": "password", "value": "User1234!", "temporary": false }],
       "realmRoles": ["ROLE_USER"]
+    },
+    {
+      "username": "employe-demo",
+      "enabled": true,
+      "email": "employe@springhotel.local",
+      "emailVerified": true,
+      "firstName": "Employe",
+      "lastName": "Demo",
+      "credentials": [{ "type": "password", "value": "Employe1234!", "temporary": false }],
+      "realmRoles": ["ROLE_EMPLOYE", "ROLE_USER"]
     }
   ]
 }

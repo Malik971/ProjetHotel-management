@@ -93,7 +93,7 @@ export default function Navbar() {
 
                     {isEmploye && (
                         <Link
-                            to="/employe"
+                            to="/admin"
                             className="px-4 py-2 rounded-xl bg-[#0369A1] hover:bg-[#075985] text-white text-sm font-semibold transition-colors"
                         >
                             Espace employé
@@ -204,7 +204,7 @@ export default function Navbar() {
 
                             {isEmploye && (
                                 <Link
-                                    to="/employe"
+                                    to="/admin"
                                     onClick={() => setMobileOpen(false)}
                                     className="block px-3 py-2.5 rounded-lg bg-[#0369A1] text-white text-sm font-semibold text-center"
                                 >

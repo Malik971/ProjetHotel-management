@@ -1,15 +1,18 @@
 // src/Pages/admin/AdminChambres.jsx
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
-    ArrowLeft, Plus, Pencil, Trash2, Search, X, Bed, Users, Maximize2,
+    ArrowLeft, Plus, Pencil, Search, X, Bed, Users, Maximize2,
     Image as ImageIcon, Building2
 } from "lucide-react";
 import {
     getAllChambres, creerChambre, updateChambre, deleteChambre,
 } from "../../services/chambreService";
 import { getAllHotels } from "../../services/hotelSearchService";
+import { useAuth } from "../../hooks/useAuth";
+import EmployeModeBanner from "../../components/admin/EmployeModeBanner";
+import DeleteButton from "../../components/admin/DeleteButton";
 
 /**
  * Page admin de gestion des chambres.
@@ -22,7 +25,9 @@ import { getAllHotels } from "../../services/hotelSearchService";
  *   - Indication visuelle nombre d'images par chambre
  */
 export default function AdminChambres() {
-    const navigate = useNavigate();
+    // Bouton supprimer reserve aux ADMIN. L'employe peut creer/modifier mais
+    // pas supprimer (double barriere avec le DELETE ADMIN-only du backend).
+    const { isAdmin } = useAuth();
     const [chambres, setChambres] = useState([]);
     const [hotels, setHotels] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -110,6 +115,8 @@ export default function AdminChambres() {
                         Nouvelle chambre
                     </button>
                 </div>
+
+                <EmployeModeBanner />
 
                 {/* Filtres */}
                 <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-4 flex flex-wrap gap-3">
@@ -214,13 +221,11 @@ export default function AdminChambres() {
                                                     >
                                                         <Pencil size={14} />
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(c)}
-                                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title="Supprimer"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <DeleteButton
+                                                        variant="icon"
+                                                        canDelete={isAdmin}
+                                                        onDelete={() => handleDelete(c)}
+                                                    />
                                                 </div>
                                             </td>
                                         </tr>

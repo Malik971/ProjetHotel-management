@@ -46,9 +46,11 @@ export default function ConnexionUser() {
     useEffect(() => {
         if (!authLoading && isAuthenticated) {
             const roles = JSON.parse(localStorage.getItem("sejour_roles") || "[]");
-            const userIsAdmin = isAdmin || roles.includes("ROLE_ADMIN");
+            // Admin ET employe atterrissent sur le dashboard admin (espace partage).
+            const userIsStaff =
+                isAdmin || roles.includes("ROLE_ADMIN") || roles.includes("ROLE_EMPLOYE");
             const target =
-                redirectAfterLogin === "/" && userIsAdmin ? "/admin" : redirectAfterLogin;
+                redirectAfterLogin === "/" && userIsStaff ? "/admin" : redirectAfterLogin;
             navigate(target, { replace: true });
         }
     }, [isAuthenticated, authLoading, isAdmin, navigate, redirectAfterLogin]);
@@ -65,9 +67,11 @@ export default function ConnexionUser() {
 
         if (success) {
             const roles = JSON.parse(localStorage.getItem("sejour_roles") || "[]");
-            const userIsAdmin = roles.includes("ROLE_ADMIN");
+            // Admin ET employe atterrissent sur le dashboard admin (espace partage).
+            const userIsStaff =
+                roles.includes("ROLE_ADMIN") || roles.includes("ROLE_EMPLOYE");
             const target =
-                redirectAfterLogin === "/" && userIsAdmin ? "/admin" : redirectAfterLogin;
+                redirectAfterLogin === "/" && userIsStaff ? "/admin" : redirectAfterLogin;
             navigate(target, { replace: true });
         } else {
             setError("Identifiants incorrects");

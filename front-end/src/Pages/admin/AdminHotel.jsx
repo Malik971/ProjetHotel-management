@@ -3,10 +3,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import {
-    ArrowLeft, Plus, Pencil, Trash2, Search, X, Building2, MapPin, Star,
+    ArrowLeft, Plus, Pencil, Search, X, Building2, MapPin, Star,
     Image as ImageIcon,
 } from "lucide-react";
 import { httpClient } from "../../api/httpClient";
+import { useAuth } from "../../hooks/useAuth";
+import EmployeModeBanner from "../../components/admin/EmployeModeBanner";
+import DeleteButton from "../../components/admin/DeleteButton";
 
 const EMPTY_FORM = { nom: "", adresse: "", ville: "", description: "", noteMoyenne: 0, prixMoyenNuit: 0, categorie: 3, latitude: null, longitude: null };
 
@@ -21,6 +24,10 @@ const EMPTY_FORM = { nom: "", adresse: "", ville: "", description: "", noteMoyen
  *   - Plus d'URL hardcode : utilise VITE_API_URL
  */
 export default function AdminHotel() {
+    // Seul un ADMIN voit le bouton supprimer. Un EMPLOYE (compte de demo) accede
+    // a la page et peut creer/modifier, mais pas supprimer. Double barriere :
+    // le backend refuse aussi tout DELETE non-ADMIN (SecurityConfig).
+    const { isAdmin } = useAuth();
     const [hotels, setHotels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -108,6 +115,8 @@ export default function AdminHotel() {
                         Nouvel hotel
                     </button>
                 </div>
+
+                <EmployeModeBanner />
 
                 {/* Recherche */}
                 <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm mb-4">
@@ -198,10 +207,11 @@ export default function AdminHotel() {
                                                         className="p-1.5 text-[#0EA5E9] hover:bg-sky-50 rounded-lg transition-colors" title="Modifier">
                                                         <Pencil size={14} />
                                                     </button>
-                                                    <button onClick={() => handleDelete(h)}
-                                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer">
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <DeleteButton
+                                                        variant="icon"
+                                                        canDelete={isAdmin}
+                                                        onDelete={() => handleDelete(h)}
+                                                    />
                                                 </div>
                                             </td>
                                         </tr>
