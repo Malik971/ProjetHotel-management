@@ -26,6 +26,9 @@ node_modules/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+### Sorties de compilation IntelliJ + cache Vite (ne pas committer) ###
+out/
+**/.vite/
 ### VS Code ###
 .vscode/
 front-end/.gitignore
