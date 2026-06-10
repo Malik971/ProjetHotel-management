@@ -1,6 +1,16 @@
 # Guide de mise en ligne, SpringHotel + Pastell mock
 
-Ce document est le pas a pas operationnel pour redeployer l'ensemble du projet sur Render et Netlify, en partant d'un compte vide. Compter trente minutes a une heure pour la premiere fois.
+> Aujourd'hui, le projet tourne sur **Railway** (les services Java et Keycloak en Docker, plus la base PostgreSQL) et sur **Netlify** pour les deux frontends.
+>
+> **Pourquoi etre passe de Render a Railway ?**
+>
+> - **Tout au meme endroit.** Avec le backend, le mock Pastell et Keycloak, ca fait trois services a faire tourner en plus de la base. Les reunir sur une seule plateforme, en Docker, est bien plus simple a suivre que de les eparpiller.
+> - **Keycloak doit garder ses donnees.** En ajoutant l'authentification, il me fallait un service stable qui se souvienne de tout entre deux redemarrages. C'etait plus direct a mettre en place sur Railway.
+> - **Le cout.** Le fonctionnement et les credits de Railway tombaient mieux pour ce projet.
+>
+> Le pas a pas ci-dessous decrit l'installation d'origine sur Render. Je le garde comme reference : les principes restent les memes sur Railway, un service Docker par brique, des variables d'environnement, une base PostgreSQL.
+
+Ce document est le pas a pas operationnel pour deployer l'ensemble du projet, en partant d'un compte vide. Compter trente minutes a une heure pour la premiere fois.
 
 L'architecture cible est volontairement gratuite et sans frais cachés : Render pour les deux services Java et la base PostgreSQL, Netlify pour les deux frontends statiques, UptimeRobot pour garder les services Render free tier eveilles.
 

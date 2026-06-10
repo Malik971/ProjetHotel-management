@@ -57,6 +57,8 @@ pastell-mock-production.up.railway.app
 - Frontend sur Netlify (build Vite), déclenché à chaque push sur `main`.
 - UptimeRobot sur `/actuator/health` et `/api/version.php` toutes les 5 minutes.
 
+J'ai choisi Railway plutôt que Render pour garder ces trois services et la base au même endroit, parce que Keycloak avait besoin d'un hébergement stable qui conserve ses données, et parce que le coût me convenait mieux.
+
 ---
 
 ## Ce que l'application fait
