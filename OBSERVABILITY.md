@@ -4,7 +4,7 @@ Le projet expose son etat de fonctionnement via trois couches superposees, du pl
 
 ## Couche 1, Spring Boot Actuator
 
-Couche par defaut pour les sondes infrastructure (Render healthcheck, UptimeRobot, Kubernetes liveness/readiness si on y passait un jour).
+Couche par defaut pour les sondes infrastructure (Railway healthcheck, UptimeRobot, Kubernetes liveness/readiness si on y passait un jour).
 
 Endpoints actifs en prod :
 
@@ -23,7 +23,7 @@ management.endpoint.health.show-details=never
 
 Utilise par :
 
-* Render, qui ping `/actuator/health` toutes les minutes pour decider si le service est sain.
+* Railway, qui ping `/actuator/health` toutes les minutes pour decider si le service est sain.
 * UptimeRobot, qui ping `/actuator/health` toutes les cinq minutes pour empecher le free tier de s'endormir.
 
 ## Couche 2, endpoint custom `/api/admin/pastell/status`
@@ -92,7 +92,7 @@ Utile pour :
 
 Decision prise au demarrage du Lot 6 : pas de couche 4 Prometheus.
 
-* Prometheus exige un serveur de scraping en plus du backend a monitorer. Sur Render free tier, c'est un troisieme service a maintenir.
+* Prometheus exige un serveur de scraping en plus du backend a monitorer. Sur Railway, c'est un troisieme service a maintenir.
 * Grafana en mode SaaS gratuit existe (Grafana Cloud), mais ca rajoute une dependance externe pour zero benefice cote demo.
 * Pour un portfolio, montrer un dashboard custom HTML est plus parlant qu'un Prometheus genere automatiquement : ca demontre que le candidat sait choisir des indicateurs metier, pas juste plugger un truc tout fait.
 

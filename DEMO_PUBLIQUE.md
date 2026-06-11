@@ -43,7 +43,7 @@ Cette valeur est definie cote backend par la variable d'environnement `DEMO_ADMI
 * Les bots qui taperaient sur tous les `/api/admin/*` qu'ils trouvent.
 * Les visiteurs curieux qui essaieraient un `curl` direct sans avoir lu le code.
 
-Cela suffit pour eviter le bruit. Si quelqu'un de motive force un poll, le pire qu'il puisse faire est de consommer un peu de CPU sur Render. Pas de perte de donnees, pas de fuite d'info.
+Cela suffit pour eviter le bruit. Si quelqu'un de motive force un poll, le pire qu'il puisse faire est de consommer un peu de CPU sur Railway. Pas de perte de donnees, pas de fuite d'info.
 
 ## Rate limit
 
@@ -60,7 +60,7 @@ Au-dela, le serveur repond `429 Too Many Requests` avec un header `Retry-After: 
 
 Ce filtre est code maison, sans dependance externe (pas de Bucket4j, pas de Redis), parce que pour un portfolio mono-instance free tier c'est largement suffisant et ca evite de gonfler le projet d'une couche d'infra qui ne sert qu'a une chose.
 
-**Limite assumee :** un attaquant peut faire tourner les IPs. Mais a ce stade-la, il pourrait aussi simplement DDOS le free tier Render, ce qui n'est pas notre probleme a defendre.
+**Limite assumee :** un attaquant peut faire tourner les IPs. Mais a ce stade-la, il pourrait aussi simplement DDOS le service Railway, ce qui n'est pas notre probleme a defendre.
 
 ## CORS
 
@@ -84,14 +84,14 @@ Pour une vraie prod, ces routes seraient en `hasRole("ADMIN")` et la demo aurait
 
 ## Donnees
 
-La base PostgreSQL Render n'est jamais exposee directement. Seul sejour-backend la lit, via l'URL interne Render qui n'est joignable qu'entre services du meme compte.
+La base PostgreSQL Railway n'est jamais exposee directement. Seul sejour-backend la lit, via l'URL interne Railway qui n'est joignable qu'entre services du meme compte.
 
 Pas de donnees personnelles reelles. Les utilisateurs qui s'inscrivent (registration libre, le frontend l'autorise) creent des comptes consultables uniquement par eux. Aucune validation d'email, aucun envoi de mail (sauf si `MAIL_USERNAME` et `MAIL_PASSWORD` sont configures).
 
 ## Ce qui n'est PAS securise et pourquoi c'est OK ici
 
 * **Pas de JWT, pas de refresh token :** les sessions sont stateless via le contexte Spring Security par requete. Pas adapte a une vraie app, mais bien suffisant pour une demo.
-* **Pas de HTTPS force au niveau backend :** Render et Netlify gerent HTTPS au niveau de l'edge, l'app derriere ne s'en occupe pas.
+* **Pas de HTTPS force au niveau backend :** Railway et Netlify gerent HTTPS au niveau de l'edge, l'app derriere ne s'en occupe pas.
 * **Le compte admin `test@test.com` reste seede :** son mot de passe `test123` est en clair dans le code. Un attaquant qui lit le code source peut se loguer admin. Pour une demo c'est volontairement laisse pour pouvoir tester les fonctionnalites admin localement et a distance.
 
 Ces choix sont coherents avec l'objectif : un portfolio interactif, pas une plateforme commerciale. Quand le projet sera utilise en vrai, ce document sera reecrit.

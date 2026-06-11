@@ -14,7 +14,7 @@ PASTELL_MOCK_PASSWORD=sejour-pass
 Cette approche fonctionne mais a deux defauts en production :
 
 1. Le mot de passe est statique. S'il fuit, il reste valide indefiniment.
-2. Pour le deploiement sur Render, il faut maintenir la meme valeur en clair sur deux services distincts (sejour et mock). Une desynchronisation casse l'authentification en silence.
+2. Pour le deploiement sur Railway, il faut maintenir la meme valeur en clair sur deux services distincts (sejour et mock). Une desynchronisation casse l'authentification en silence.
 
 ## Approche retenue : derivation HMAC
 
@@ -70,7 +70,7 @@ Seul le password porte la fraicheur temporelle. C'est suffisant : un mot de pass
 
 ## Tolerance au changement de jour
 
-A minuit UTC, le password derive change. Une requete en vol au moment du basculement, ou un drift d'horloge entre deux conteneurs Render, peut faire que sejour envoie encore le password d'hier alors que le mock attend deja celui d'aujourd'hui.
+A minuit UTC, le password derive change. Une requete en vol au moment du basculement, ou un drift d'horloge entre deux conteneurs Railway, peut faire que sejour envoie encore le password d'hier alors que le mock attend deja celui d'aujourd'hui.
 
 Sans tolerance, ces secondes produiraient des 401 qui declencheraient inutilement le retry du Lot 4.
 
@@ -111,12 +111,12 @@ openssl rand -hex 32
 
 Cette commande produit soixante-quatre caracteres hexadecimaux, soit 256 bits d'entropie. Largement suffisant pour resister a un brute force sur HMAC-SHA256.
 
-A reporter sur les deux services Render comme variable d'environnement `PASTELL_MASTER_SECRET`. Si tu modifies la valeur, il faut redeployer les deux services en meme temps, sinon le password d'hier accepte cote mock ne suffit pas a couvrir le decalage.
+A reporter sur les deux services Railway comme variable d'environnement `PASTELL_MASTER_SECRET`. Si tu modifies la valeur, il faut redeployer les deux services en meme temps, sinon le password d'hier accepte cote mock ne suffit pas a couvrir le decalage.
 
 ## Limites assumees
 
 * Si le secret maitre fuit, l'attaquant peut deriver tous les passwords passes et futurs. La rotation quotidienne n'a aucune valeur si le secret lui-meme est compromis.
 * Aucune revocation possible sans changer le secret et redeployer.
-* Pas de protection contre un attaquant interne Render qui aurait acces aux variables d'env de l'organisation.
+* Pas de protection contre un attaquant interne Railway qui aurait acces aux variables d'env de l'organisation.
 
 Ces limites sont acceptables pour le contexte (portfolio public, demo). Pour une vraie integration Pastell, l'authentification ne passerait plus par ce mecanisme : Pastell fournit ses propres credentials avec des rotations gerees par leur cote.
