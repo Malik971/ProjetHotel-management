@@ -325,13 +325,13 @@ export default function AdminDashboard() {
                         onClick={() => setDemoOpen(false)}
                     >
                         <div
-                            className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative"
+                            className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative dark:bg-gray-900"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <button
                                 onClick={() => setDemoOpen(false)}
                                 aria-label="Fermer la demo"
-                                className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                                className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors dark:hover:bg-gray-800 dark:hover:text-gray-200"
                             >
                                 <X size={18} />
                             </button>

@@ -1,7 +1,7 @@
 // src/components/NavBar.jsx
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Navbar() {
@@ -10,6 +10,19 @@ export default function Navbar() {
 
     const { user, isAuthenticated, isAdmin, isEmploye, logout } = useAuth();
     const isLogged = isAuthenticated;
+
+    // Theme sombre : pilote par la classe .dark sur <html>, memorise en localStorage.
+    const [dark, setDark] = useState(
+        () => typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+    );
+    const toggleTheme = () => {
+        setDark((prev) => {
+            const next = !prev;
+            document.documentElement.classList.toggle("dark", next);
+            localStorage.setItem("theme", next ? "dark" : "light");
+            return next;
+        });
+    };
 
     const handleLogout = () => {
         logout();
@@ -24,6 +37,17 @@ export default function Navbar() {
         || "?"
     ).toUpperCase();
 
+    const ThemeToggle = ({ className = "" }) => (
+        <button
+            onClick={toggleTheme}
+            aria-label={dark ? "Passer en mode clair" : "Passer en mode sombre"}
+            title={dark ? "Mode clair" : "Mode sombre"}
+            className={`p-2 rounded-xl border border-gray-200 text-gray-600 hover:text-[#0EA5E9] hover:border-[#0EA5E9] transition-all dark:border-gray-700 dark:text-gray-300 dark:hover:text-[#38BDF8] dark:hover:border-[#38BDF8] ${className}`}
+        >
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+    );
+
     const Logo = () => (
         <Link to="/" className="flex items-center gap-2 group">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0EA5E9] to-[#0369A1] flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
@@ -33,7 +57,7 @@ export default function Navbar() {
                     <circle cx="12" cy="7" r="3" stroke="white" strokeWidth="2" fill="#F59E0B"/>
                 </svg>
             </div>
-            <span className="text-xl font-bold text-[#0369A1] tracking-tight"
+            <span className="text-xl font-bold text-[#0369A1] dark:text-[#38BDF8] tracking-tight"
                   style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}>
                 Séjour
             </span>
@@ -41,14 +65,14 @@ export default function Navbar() {
     );
 
     return (
-        <nav className="w-full bg-white border-b border-gray-100 sticky top-0 z-40">
+        <nav className="w-full bg-white border-b border-gray-100 sticky top-0 z-40 dark:bg-gray-900 dark:border-gray-800">
             <div className="max-w-[1400px] mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
 
                 {/* Logo */}
                 <Logo />
 
                 {/* Nav centrale — desktop uniquement */}
-                <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
+                <ul className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600 dark:text-gray-300">
                     <li>
                         <Link to="/" className="hover:text-[#0EA5E9] transition-colors">
                             Accueil
@@ -65,11 +89,13 @@ export default function Navbar() {
 
                 {/* Actions droite — desktop */}
                 <div className="hidden md:flex items-center gap-3">
+                    <ThemeToggle />
+
                     {!isLogged && (
                         <>
                             <Link
                                 to="/Connexion"
-                                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:text-[#0EA5E9] hover:bg-gray-50 transition-all"
+                                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:text-[#0EA5E9] hover:bg-gray-50 transition-all dark:text-gray-200 dark:hover:bg-gray-800"
                             >
                                 Connexion
                             </Link>
@@ -105,7 +131,7 @@ export default function Navbar() {
                     {isLogged && (
                         <Link
                             to="/mon-profil"
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-[#0EA5E9] hover:text-[#0EA5E9] transition-all"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-medium hover:border-[#0EA5E9] hover:text-[#0EA5E9] transition-all dark:border-gray-700 dark:text-gray-200"
                             title="Mon profil"
                         >
                             <span className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#0369A1] text-white flex items-center justify-center text-xs font-bold">
@@ -118,7 +144,7 @@ export default function Navbar() {
                     {isLogged && (
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:border-[#0EA5E9] hover:text-[#0EA5E9] transition-all"
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-gray-600 text-sm font-medium hover:border-[#0EA5E9] hover:text-[#0EA5E9] transition-all dark:border-gray-700 dark:text-gray-300"
                         >
                             <LogOut size={14} />
                             Déconnexion
@@ -126,24 +152,27 @@ export default function Navbar() {
                     )}
                 </div>
 
-                {/* Burger mobile */}
-                <button
-                    onClick={() => setMobileOpen(!mobileOpen)}
-                    className="md:hidden text-gray-700 hover:text-[#0EA5E9] transition-colors"
-                    aria-label="Menu"
-                >
-                    {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-                </button>
+                {/* Actions mobile : interrupteur + burger */}
+                <div className="md:hidden flex items-center gap-2">
+                    <ThemeToggle />
+                    <button
+                        onClick={() => setMobileOpen(!mobileOpen)}
+                        className="text-gray-700 hover:text-[#0EA5E9] transition-colors dark:text-gray-200"
+                        aria-label="Menu"
+                    >
+                        {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+                    </button>
+                </div>
             </div>
 
             {/* Menu mobile */}
             {mobileOpen && (
-                <div className="md:hidden border-t border-gray-100 bg-white">
+                <div className="md:hidden border-t border-gray-100 bg-white dark:bg-gray-900 dark:border-gray-800">
                     <div className="px-4 py-4 space-y-2">
                         <Link
                             to="/"
                             onClick={() => setMobileOpen(false)}
-                            className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9]"
+                            className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9] dark:text-gray-200 dark:hover:bg-gray-800"
                         >
                             Accueil
                         </Link>
@@ -152,7 +181,7 @@ export default function Navbar() {
                             <Link
                                 to="/mes-reservations"
                                 onClick={() => setMobileOpen(false)}
-                                className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9]"
+                                className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9] dark:text-gray-200 dark:hover:bg-gray-800"
                             >
                                 Mes réservations
                             </Link>
@@ -163,7 +192,7 @@ export default function Navbar() {
                             <Link
                                 to="/mon-profil"
                                 onClick={() => setMobileOpen(false)}
-                                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9]"
+                                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-[#0EA5E9] dark:text-gray-200 dark:hover:bg-gray-800"
                             >
                                 <span className="w-6 h-6 rounded-full bg-gradient-to-br from-[#0EA5E9] to-[#0369A1] text-white flex items-center justify-center text-xs font-bold">
                                     {initiale}
@@ -172,13 +201,13 @@ export default function Navbar() {
                             </Link>
                         )}
 
-                        <div className="pt-2 mt-2 border-t border-gray-100 space-y-2">
+                        <div className="pt-2 mt-2 border-t border-gray-100 space-y-2 dark:border-gray-800">
                             {!isLogged && (
                                 <>
                                     <Link
                                         to="/Connexion"
                                         onClick={() => setMobileOpen(false)}
-                                        className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                        className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
                                     >
                                         Connexion
                                     </Link>
@@ -215,7 +244,7 @@ export default function Navbar() {
                             {isLogged && (
                                 <button
                                     onClick={handleLogout}
-                                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium"
+                                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium dark:border-gray-700 dark:text-gray-300"
                                 >
                                     <LogOut size={14} />
                                     Déconnexion

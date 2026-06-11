@@ -1,3 +1,16 @@
 @import "tailwindcss";
 
 @source "../src/**/*.{js,ts,jsx,tsx}";
+
+/* Mode sombre pilote par une classe .dark sur <html> (et non par la preference
+   systeme). On peut ainsi le basculer manuellement via l'interrupteur de la
+   NavBar, et les utilitaires dark: de Tailwind s'appliquent partout. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+html.dark {
+    color-scheme: dark;
+}
+
+html.dark body {
+    background-color: #0b1220;
+}
