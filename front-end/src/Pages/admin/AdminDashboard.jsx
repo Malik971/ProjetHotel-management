@@ -5,13 +5,14 @@ import { toast } from "sonner";
 import {
     CheckCircle2, Clock, RefreshCw, AlertTriangle, ArrowRight,
     List, BookOpen, ExternalLink, ArrowUp, Activity, ArrowLeft,
-    UserPlus, Building2, BedDouble, BarChart3
+    UserPlus, Building2, BedDouble, BarChart3, PlayCircle, X
 } from "lucide-react";
 
 import StatusBadge from "../../components/admin/StatusBadge";
 import StatCard from "../../components/admin/StatCard";
 import OrchestrationDiagram from "../../components/admin/OrchestrationDiagram";
 import EmployeModeBanner from "../../components/admin/EmployeModeBanner";
+import PastellLifecycleDemo from "../../components/admin/PastellLifecycleDemo";
 import {
     getPastellStatus,
     getRecentActivity,
@@ -39,6 +40,7 @@ export default function AdminDashboard() {
     const [activity, setActivity] = useState([]);
     const [loading, setLoading] = useState(true);
     const [forcing, setForcing] = useState(false);
+    const [demoOpen, setDemoOpen] = useState(false);
 
     const loadAll = async () => {
         try {
@@ -185,6 +187,17 @@ export default function AdminDashboard() {
 
                         <div className="flex flex-col gap-2">
                             <button
+                                onClick={() => setDemoOpen(true)}
+                                className="flex items-center justify-between gap-2 px-3 py-2.5 bg-sky-50 border border-[#0EA5E9]/30 rounded-xl text-gray-900 text-sm font-medium hover:border-[#0EA5E9] hover:bg-sky-100 transition-all"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <PlayCircle size={16} className="text-[#0EA5E9]" />
+                                    Comment ca marche ? (demo guidee)
+                                </span>
+                                <ArrowRight size={14} className="text-gray-400" />
+                            </button>
+
+                            <button
                                 onClick={handleForcePoll}
                                 disabled={forcing}
                                 className="flex items-center justify-between gap-2 px-3 py-2.5 bg-[#F8FAFC] border border-gray-200 rounded-xl text-gray-900 text-sm font-medium hover:border-[#0EA5E9] hover:bg-sky-50 transition-all disabled:opacity-50"
@@ -305,6 +318,27 @@ export default function AdminDashboard() {
                         />
                     </div>
                 </div>
+
+                {demoOpen && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                        onClick={() => setDemoOpen(false)}
+                    >
+                        <div
+                            className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                onClick={() => setDemoOpen(false)}
+                                aria-label="Fermer la demo"
+                                className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                            <PastellLifecycleDemo />
+                        </div>
+                    </div>
+                )}
 
             </div>
         </div>
