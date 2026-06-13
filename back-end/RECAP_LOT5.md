@@ -1,4 +1,4 @@
-# Lot 5 — Récap technique
+# Lot 5 - Récap technique
 
 > Synchronisation descendante Pastell → Sejour
 > Document destiné à Steven (responsable dev Libriciel) pour relecture

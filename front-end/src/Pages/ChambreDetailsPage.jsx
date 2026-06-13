@@ -9,7 +9,8 @@ import {
 import { getChambreById } from "../services/chambreService";
 import { extractHotelIdFromSlug } from "../utils/slugify";
 import { useAuth } from "../hooks/useAuth";
-import DateRangePicker, { toISO, formatRange } from "../components/DateRangePicker";
+import DateRangePicker from "../components/DateRangePicker";
+import { toISO, formatRange } from "../utils/dateUtils";
 
 // Images de fallback si la chambre n'a pas de photos
 const FALLBACK_ROOM_IMAGES = [

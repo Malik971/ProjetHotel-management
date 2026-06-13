@@ -1,7 +1,8 @@
 // src/components/BarRecherche.jsx
 import { useState } from "react";
 import { Search, MapPin, Calendar, Users } from "lucide-react";
-import DateRangePicker, { toISO, formatRange } from "./DateRangePicker";
+import DateRangePicker from "./DateRangePicker";
+import { toISO, formatRange } from "../utils/dateUtils";
 
 
 export default function BarRecherche({ onSearch }) {

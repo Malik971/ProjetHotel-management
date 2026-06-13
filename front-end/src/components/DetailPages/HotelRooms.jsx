@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, Users } from "lucide-react";
 import { useChambres } from "../../hooks/useChambres";
 import RoomCard from "./RoomCard";
-import DateRangePicker, { toISO, formatRange } from "../DateRangePicker";
+import DateRangePicker from "../DateRangePicker";
+import { toISO, formatRange } from "../../utils/dateUtils";
 
 /**
  * Liste des chambres d'un hotel avec filtre de disponibilite par dates.

@@ -1,6 +1,7 @@
 // src/components/DateRangePicker.jsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { toISO } from "../utils/dateUtils";
 
 // ─── Utilitaires date (no-deps) ────────────────────────────────────────────
 
@@ -9,14 +10,6 @@ const MOIS_FR = [
     "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
     "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre",
 ];
-
-export function toISO(date) {
-    if (!date) return "";
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-}
 
 function isSameDay(a, b) {
     if (!a || !b) return false;
@@ -49,16 +42,6 @@ function getDaysInMonth(year, month) {
 function getFirstDayOfWeek(year, month) {
     const day = new Date(year, month, 1).getDay();
     return day === 0 ? 6 : day - 1;
-}
-
-export function formatRange(start, end) {
-    const fmt = (d) =>
-        new Intl.DateTimeFormat("fr-FR", {
-            weekday: "short", day: "numeric", month: "short",
-        }).format(d);
-    if (!start) return "";
-    if (!end) return `${fmt(start)} - ?`;
-    return `${fmt(start)}  -  ${fmt(end)}`;
 }
 
 // ─── Grille d'un mois ─────────────────────────────────────────────────────
