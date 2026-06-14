@@ -65,6 +65,11 @@ public class PastellClient {
     private static final String FORM_FIELD_TYPE = "type";
 
     /**
+     * Nom du parametre form-data attendu par Pastell pour une transition (change-action).
+     */
+    private static final String FORM_FIELD_ACTION = "action";
+
+    /**
      * ParameterizedTypeReference pour deserialiser le tableau JSON du journal
      * en List<PastellJournalEntry>. Sans ce wrapper, le parameterized type est
      * efface a la compilation et Jackson ne peut pas savoir qu'on veut une liste.
@@ -245,6 +250,116 @@ public class PastellClient {
             log.warn("Pastell get-journal erreur RestClient : {}", e.getMessage());
             throw new PastellApiException(
                     "Erreur lors de l'appel GET /api/v2/journal : " + e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    // ============================================================
+    // DEMONSTRATION INTERACTIVE : lecture et transition de dossier
+    // ============================================================
+
+    /**
+     * Recupere l'etat courant d'un dossier Pastell (detail-document).
+     * <pre>
+     *   GET /api/v2/entite/{entiteId}/document/{idD}
+     * </pre>
+     * Utilise par le dashboard de demonstration pour afficher l'etape circuit
+     * et les actions encore possibles, sans jamais appeler le connecteur en direct
+     * depuis le navigateur.
+     *
+     * @param idD identifiant du dossier
+     * @return l'etat courant (info + action_possible)
+     * @throws PastellApiException en cas d'echec HTTP ou reseau
+     */
+    public PastellDocumentState getDocument(String idD) {
+        long entiteId = properties.getEntiteId();
+        log.debug("Pastell detail-document : entiteId={}, idD={}", entiteId, idD);
+        try {
+            return restClient.get()
+                    .uri("/api/v2/entite/{entiteId}/document/{idD}", entiteId, idD)
+                    .retrieve()
+                    .body(PastellDocumentState.class);
+
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            String body = e.getResponseBodyAsString();
+            log.warn("Pastell detail-document echec HTTP {} : {}", status, body);
+            throw new PastellApiException(
+                    status,
+                    body,
+                    "Pastell a repondu en erreur HTTP " + status + " sur le detail du dossier " + idD
+            );
+
+        } catch (ResourceAccessException e) {
+            log.warn("Pastell detail-document echec reseau : {}", e.getMessage());
+            throw new PastellApiException(
+                    "Echec d'acces a Pastell (timeout ou reseau) sur le detail du dossier : " + e.getMessage(),
+                    e
+            );
+
+        } catch (RestClientException e) {
+            log.warn("Pastell detail-document erreur RestClient : {}", e.getMessage());
+            throw new PastellApiException(
+                    "Erreur lors de la lecture du dossier Pastell : " + e.getMessage(),
+                    e
+            );
+        }
+    }
+
+    /**
+     * Declenche une action (transition d'etape circuit) sur un dossier existant.
+     * <pre>
+     *   POST /api/v2/entite/{entiteId}/document/{idD}/action
+     *   Content-Type: multipart/form-data
+     *
+     *   action=validation
+     * </pre>
+     * Le connecteur applique la transition et renvoie le nouvel etat du dossier.
+     * L'auth Basic rotative est posee par l'interceptor du RestClient, exactement
+     * comme pour createDocument : aucune gestion de credentials ici.
+     *
+     * @param idD    identifiant du dossier
+     * @param action nom de l'action (validation, confirmation, terminaison, annulation)
+     * @return le nouvel etat du dossier apres transition
+     * @throws PastellApiException si l'action est refusee (4xx), en erreur serveur (5xx) ou reseau
+     */
+    public PastellDocumentState doAction(String idD, String action) {
+        long entiteId = properties.getEntiteId();
+        log.debug("Pastell change-action : entiteId={}, idD={}, action={}", entiteId, idD, action);
+
+        MultiValueMap<String, Object> formBody = new LinkedMultiValueMap<>();
+        formBody.add(FORM_FIELD_ACTION, action);
+
+        try {
+            return restClient.post()
+                    .uri("/api/v2/entite/{entiteId}/document/{idD}/action", entiteId, idD)
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(formBody)
+                    .retrieve()
+                    .body(PastellDocumentState.class);
+
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            String body = e.getResponseBodyAsString();
+            log.warn("Pastell change-action echec HTTP {} : {}", status, body);
+            throw new PastellApiException(
+                    status,
+                    body,
+                    "Pastell a refuse l'action '" + action + "' (HTTP " + status + ")"
+            );
+
+        } catch (ResourceAccessException e) {
+            log.warn("Pastell change-action echec reseau : {}", e.getMessage());
+            throw new PastellApiException(
+                    "Echec d'acces a Pastell (timeout ou reseau) sur l'action : " + e.getMessage(),
+                    e
+            );
+
+        } catch (RestClientException e) {
+            log.warn("Pastell change-action erreur RestClient : {}", e.getMessage());
+            throw new PastellApiException(
+                    "Erreur lors de l'execution de l'action Pastell : " + e.getMessage(),
                     e
             );
         }

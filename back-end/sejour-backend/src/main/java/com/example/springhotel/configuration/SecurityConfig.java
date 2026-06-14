@@ -170,16 +170,35 @@ public class SecurityConfig {
                         // Fichiers statiques uploades
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // Endpoints Pastell : status + poll.
-                        // Le scope Keycloak pastell-admin reste accepte, mais on
-                        // ouvre aussi a ROLE_ADMIN et ROLE_EMPLOYE pour que le compte
-                        // employe-demo puisse superviser le bus depuis le dashboard
-                        // admin (lecture des compteurs + relance manuelle) sans avoir
-                        // a demander le scope pastell-admin.
-                        .requestMatchers(HttpMethod.GET, "/api/admin/pastell/status")
-                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN", "ROLE_EMPLOYE")
-                        .requestMatchers(HttpMethod.POST, "/api/admin/pastell/poll")
-                        .hasAnyAuthority("SCOPE_pastell-admin", "ROLE_ADMIN", "ROLE_EMPLOYE")
+                        // ------------------------------------------------------------
+                        // Surface Pastell de DEMONSTRATION : ouverte au public.
+                        // ------------------------------------------------------------
+                        // Les dashboards de demo (dashboard-vue et l'ancien dashboard)
+                        // sont consultes par des visiteurs non connectes. Ils passent
+                        // par ces endpoints admin de sejour-backend, qui portent les
+                        // credentials Pastell cote serveur, plutot que d'appeler le
+                        // connecteur en direct (impossible depuis un navigateur a cause
+                        // de l'auth Basic rotative derivee par HMAC).
+                        //
+                        // Lecture : permitAll. Ecritures (poll, relance, action de demo) :
+                        // permitAll au niveau Spring mais protegees applicativement par
+                        // l'en-tete X-Demo-Token dans AdminPastellController.
+                        //
+                        // Compromis assume pour la demo portfolio. Le reste de
+                        // /api/admin/** (gestion hotels, chambres, utilisateurs) reste
+                        // protege par roles plus bas.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/admin/pastell/status",
+                                "/api/admin/pastell/cursor",
+                                "/api/admin/activity",
+                                "/api/admin/reservations/*",
+                                "/api/admin/pastell-sync",
+                                "/api/admin/pastell-sync/**",
+                                "/api/admin/pastell/demo/document/*").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/admin/pastell/poll",
+                                "/api/admin/pastell-sync/*/retry",
+                                "/api/admin/pastell/demo/document/*/action").permitAll()
 
                         // Suppressions reservees aux administrateurs : un employe ne
                         // supprime JAMAIS (ni hotel, ni chambre, ni utilisateur).
