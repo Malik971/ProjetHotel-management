@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import chambreService from '../services/chambreService';
 
 export const useChambres = (hotelId = null) => {
@@ -6,15 +6,13 @@ export const useChambres = (hotelId = null) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (hotelId) {
-      fetchChambres();
-    } else {
-      setLoading(false);
-    }
-  }, [hotelId]);
-
-  const fetchChambres = async () => {
+  // useCallback : fetchChambres garde la meme reference tant que hotelId
+  // ne change pas. Indispensable pour l'ajouter aux dependances du useEffect
+  // sans declencher de boucle infinie (une fonction recreee a chaque render
+  // serait vue comme "differente" et relancerait l'effet en continu).
+  // Definie AVANT le useEffect : le tableau de dependances est evalue pendant
+  // le render, fetchChambres doit donc deja exister a ce moment-la.
+  const fetchChambres = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -30,7 +28,15 @@ export const useChambres = (hotelId = null) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hotelId]);
+
+  useEffect(() => {
+    if (hotelId) {
+      fetchChambres();
+    } else {
+      setLoading(false);
+    }
+  }, [hotelId, fetchChambres]);
 
   const creerChambre = async (chambre) => {
     try {

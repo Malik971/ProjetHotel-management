@@ -1,5 +1,5 @@
 // src/Pages/HomePage.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import BarRecherche from "../components/BarRecherche";
 import CardHotel from "../components/CardHotel";
 import HotelMap from "../components/HotelMap";
@@ -16,11 +16,14 @@ export default function HomePage() {
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const { hotels, loading, error, searchHotels, getAllHotels } = useHotelSearch();
 
-  useEffect(() => {
-    loadAllHotels();
-  }, []);
+  // loadAllHotels et applyFilters sont enveloppees en useCallback et definies
+  // AVANT les useEffect qui les utilisent. Raison : le tableau de dependances
+  // d'un effet est evalue pendant le render, les fonctions referencees doivent
+  // donc deja exister, et useCallback leur donne une reference stable pour
+  // eviter de relancer l'effet a chaque render.
 
-  const loadAllHotels = async () => {
+  // getAllHotels vient de useHotelSearch et est deja stable (useCallback vide).
+  const loadAllHotels = useCallback(async () => {
     try {
       await getAllHotels();
     } catch (error) {
@@ -33,24 +36,11 @@ export default function HomePage() {
           })
           .catch((err) => console.error("Erreur:", err));
     }
-  };
+  }, [getAllHotels]);
 
-  useEffect(() => {
-    if (hotels && hotels.length > 0) {
-      setAllHotels(hotels);
-      applyFilters(hotels, currentFilters);
-    }
-  }, [hotels]);
-
-  const handleSearch = async (searchParams) => {
-    try {
-      await searchHotels(searchParams);
-    } catch (error) {
-      console.error("Erreur lors de la recherche:", error);
-    }
-  };
-
-  const applyFilters = (hotelsToFilter, filters) => {
+  // applyFilters depend de allHotels (utilise comme repli quand le premier
+  // argument est absent). Recreee uniquement quand allHotels change.
+  const applyFilters = useCallback((hotelsToFilter, filters) => {
     let result = [...(hotelsToFilter || allHotels)];
 
     if (!filters || Object.keys(filters).length === 0) {
@@ -86,6 +76,25 @@ export default function HomePage() {
     }
 
     setDisplayedHotels(result);
+  }, [allHotels]);
+
+  useEffect(() => {
+    loadAllHotels();
+  }, [loadAllHotels]);
+
+  useEffect(() => {
+    if (hotels && hotels.length > 0) {
+      setAllHotels(hotels);
+      applyFilters(hotels, currentFilters);
+    }
+  }, [hotels, applyFilters, currentFilters]);
+
+  const handleSearch = async (searchParams) => {
+    try {
+      await searchHotels(searchParams);
+    } catch (error) {
+      console.error("Erreur lors de la recherche:", error);
+    }
   };
 
   const handleFilterChange = (filters) => {

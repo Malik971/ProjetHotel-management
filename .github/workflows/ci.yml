@@ -1,0 +1,149 @@
+# ============================================================
+# ci.yml - Integration continue SpringHotel
+# Emplacement : .github/workflows/ci.yml
+#
+# Declenchement : push ou pull request sur main ou develop
+#
+# Trois jobs en parallele :
+#   - backend    : compile + 143 tests (H2 en memoire, pas de PostgreSQL)
+#   - mock       : compile + 65 tests du simulateur Pastell
+#   - frontend   : build Vite + lint ESLint
+#
+# Prerequis :
+#   - Les tests backend utilisent @ActiveProfiles("test") -> H2
+#   - Le profil test est active via -Dspring.profiles.active=test
+#   - Aucun service externe requis (pas de PostgreSQL, pas de Keycloak)
+# ============================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+
+  # ----------------------------------------------------------
+  # Job 1 : tests du module sejour-backend
+  # ----------------------------------------------------------
+  backend:
+    name: Backend (sejour-backend)
+    runs-on: ubuntu-latest
+
+    steps:
+      # Etape 1 : on recupere le code sur la machine virtuelle
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Etape 2 : on installe Java 21 (meme version que le pom parent)
+      - name: Installer Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          # Cache Maven : les dependances sont mises en cache entre les runs
+          # pour ne pas tout re-telecharger depuis Maven Central a chaque push
+          cache: maven
+
+      # Etape 3 : lancer les tests du module sejour-backend uniquement
+      # -pl sejour-backend    : construire ce module
+      # -am                   : et ses dependances (le pom parent)
+      # -Dspring.profiles.active=test : activer H2, desactiver PostgreSQL
+      # Le contexte de build est back-end/ (la ou se trouve le pom parent)
+      - name: Lancer les tests sejour-backend
+        working-directory: back-end
+        run: |
+          mvn test \
+            -pl sejour-backend -am \
+            -Dspring.profiles.active=test \
+            --batch-mode \
+            --no-transfer-progress
+
+      # Etape 4 : publier le rapport de tests dans l'interface GitHub
+      # always() : s'execute meme si les tests ont echoue (pour voir les erreurs)
+      - name: Publier le rapport de tests
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rapport-tests-backend
+          path: back-end/sejour-backend/target/surefire-reports/
+          retention-days: 7
+
+  # ----------------------------------------------------------
+  # Job 2 : tests du module pastell-mock
+  # ----------------------------------------------------------
+  mock:
+    name: Mock Pastell (pastell-mock)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Installer Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      # pastell-mock est stateless (pas de JPA, pas de DB)
+      # Pas besoin du profil test : aucune base de donnees impliquee
+      - name: Lancer les tests pastell-mock
+        working-directory: back-end
+        run: |
+          mvn test \
+            -pl pastell-mock -am \
+            --batch-mode \
+            --no-transfer-progress
+
+      - name: Publier le rapport de tests
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rapport-tests-mock
+          path: back-end/pastell-mock/target/surefire-reports/
+          retention-days: 7
+
+  # ----------------------------------------------------------
+  # Job 3 : build et lint du frontend React
+  # ----------------------------------------------------------
+  frontend:
+    name: Frontend (React + Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Node 22 : compatible avec les contraintes du package-lock.json
+      # (vite exige node ^20.19.0 || >=22.12.0)
+      - name: Installer Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          # Cache npm : evite de re-telecharger node_modules a chaque push
+          cache: npm
+          cache-dependency-path: front-end/package-lock.json
+
+      # npm ci : installe exactement les versions du package-lock.json
+      # plus strict que npm install, obligatoire en CI
+      - name: Installer les dependances npm
+        working-directory: front-end
+        run: npm ci
+
+      # Vite build : detecte les imports manquants, les erreurs de syntaxe
+      - name: Build Vite
+        working-directory: front-end
+        run: npm run build
+
+      # ESLint : verifie la qualite et les conventions du code React
+      - name: Lint ESLint
+        working-directory: front-end
+        run: npm run lint

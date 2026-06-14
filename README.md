@@ -1,5 +1,7 @@
 # SpringHotel
 
+![CI](https://github.com/Malik971/ProjetHotel-management/actions/workflows/ci.yml/badge.svg)
+
 Application full-stack de réservation hôtelière sur Montpellier, avec une intégration complète du bus d'orchestration Pastell de Libriciel SCOP, une authentification OAuth2 / OpenID Connect via Keycloak, et une connexion sociale Google.
 
 **Stack :** Spring Boot 4 · Java 21 · React 18 · Tailwind CSS v4 · PostgreSQL · Flyway · Keycloak 26 · Docker · Railway · Netlify

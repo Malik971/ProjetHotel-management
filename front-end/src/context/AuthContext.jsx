@@ -27,7 +27,7 @@
  *   const { user, isAuthenticated, isAdmin, login, loginWithKeycloak, logout } = useAuth();
  */
 
-import { createContext, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { httpClient, STORAGE_KEYS, cleanLegacyStorage } from '../api/httpClient';
 import {
@@ -35,8 +35,7 @@ import {
     handleKeycloakCallback,
     logoutFromKeycloak,
 } from '../api/keycloak';
-
-export const AuthContext = createContext(null);
+import { AuthContext } from './authContextInstance';
 
 /**
  * Provider a placer en haut de l'arbre React, dans App.jsx.
