@@ -1,0 +1,29 @@
+# ============================================================
+# dashboard-vue/netlify.toml
+# ------------------------------------------------------------
+# Deploiement Netlify du dashboard de demonstration Pastell (Vue 3 plus Vuetify).
+# Site separe du frontend React principal et de l'ancien dashboard vanilla.
+#
+# Sur Netlify, configurer le site :
+#   Base directory     : dashboard-vue
+#   Build command      : npm run build
+#   Publish directory   : dashboard-vue/dist
+# ============================================================
+
+[build]
+    base = "dashboard-vue"
+    command = "npm run build"
+    publish = "dist"
+
+# Application a page unique : toutes les routes inconnues retombent sur index.html
+# pour que Vue Router gere la navigation cote client (DashboardView, StatusView).
+[[redirects]]
+    from = "/*"
+    to = "/index.html"
+    status = 200
+
+[[headers]]
+    for = "/*"
+    [headers.values]
+        X-Frame-Options = "DENY"
+        X-Content-Type-Options = "nosniff"

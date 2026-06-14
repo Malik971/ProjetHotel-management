@@ -1,0 +1,22 @@
+/* ============================================================
+ * style.css - Quelques ajustements globaux
+ * ------------------------------------------------------------
+ * Vuetify fournit l'essentiel du style via son theme. On se limite ici a des
+ * reglages transverses qui ne valent pas un composant dedie.
+ * ============================================================ */
+
+html {
+    scroll-behavior: smooth;
+}
+
+/* Police a chasse fixe pour les identifiants techniques (id_d, codes). */
+.mono {
+    font-family: "JetBrains Mono", "Fira Mono", "Consolas", monospace;
+    font-size: 0.85em;
+}
+
+/* Le diagramme de circuit peut deborder en largeur sur petit ecran : on autorise
+   un defilement horizontal plutot que de casser la mise en page. */
+.workflow-scroll {
+    overflow-x: auto;
+}
