@@ -86,33 +86,64 @@ const aligned = computed(() => {
     return allowed.includes(etapeCircuit.value);
 });
 
+function resetState() {
+    sync.value = null;
+    reservation.value = null;
+    pastellDoc.value = null;
+    journal.value = [];
+}
+
 /**
- * Choisit un dossier de demonstration exploitable : il doit avoir un id de
- * document Pastell, et de preference ne pas etre deja dans un etat terminal,
- * pour que le visiteur puisse le faire avancer.
+ * Ordonne les candidats : ceux qui ont un id de document Pastell, avancables
+ * d'abord (etat non terminal, plus interessants pour la demo), puis les autres.
+ * La liste recue est deja triee par synchro la plus recente en premier.
  */
-function pickDemoSync(items) {
+function orderCandidates(items) {
     const withDoc = items.filter((s) => s.pastellDocumentId);
-    const advanceable = withDoc.find(
-        (s) => !["terminee", "annulee"].includes((s.etapeCircuit || "").toLowerCase())
-    );
-    return advanceable || withDoc[0] || null;
+    const isTerminal = (s) => ["terminee", "annulee"].includes((s.etapeCircuit || "").toLowerCase());
+    return [...withDoc.filter((s) => !isTerminal(s)), ...withDoc.filter(isTerminal)];
 }
 
 async function launchDemo() {
     loading.value = true;
     errorMessage.value = "";
+    resetState();
     try {
         const page = await api.listSyncs(0, 50);
-        const items = page?.content || [];
-        const chosen = pickDemoSync(items);
-        if (!chosen) {
+        const candidates = orderCandidates(page?.content || []);
+        if (candidates.length === 0) {
             errorMessage.value =
-                "Aucun dossier de demonstration exploitable. Creez une reservation cote application, puis reessayez.";
+                "Aucun dossier a montrer. Creez une reservation depuis l'application, puis relancez.";
             return;
         }
+
+        // Un dossier connu de Sejour peut avoir disparu du connecteur si celui-ci
+        // a redemarre : son store est en memoire. On essaie donc les candidats, du
+        // plus recent au plus ancien, et on garde le premier qui existe encore.
+        let chosen = null;
+        let doc = null;
+        for (const candidate of candidates.slice(0, 12)) {
+            try {
+                doc = await api.getDemoDocument(candidate.pastellDocumentId);
+                chosen = candidate;
+                break;
+            } catch {
+                // 404 : ce dossier n'est plus dans le connecteur, on tente le suivant.
+                continue;
+            }
+        }
+
+        if (!chosen) {
+            errorMessage.value =
+                "Les dossiers connus de Sejour n'existent plus dans le connecteur, qui a redemarre "
+                + "et vide sa memoire. Creez une nouvelle reservation depuis l'application pour generer "
+                + "un dossier frais, puis relancez la demonstration.";
+            return;
+        }
+
         sync.value = chosen;
-        await Promise.all([loadReservation(), loadDocument(), loadJournal()]);
+        pastellDoc.value = doc;
+        await Promise.all([loadReservation(), loadJournal()]);
     } catch (e) {
         errorMessage.value = e.message;
     } finally {
@@ -151,7 +182,9 @@ async function runAction(action) {
 }
 
 const polling = usePolling(30, async () => {
-    await Promise.all([loadDocument(), loadJournal(), loadReservation()]);
+    // allSettled : un rafraichissement qui echoue (ex: dossier disparu du
+    // connecteur) ne doit pas empecher les deux autres de se mettre a jour.
+    await Promise.allSettled([loadDocument(), loadJournal(), loadReservation()]);
 });
 
 async function forcePollNow() {

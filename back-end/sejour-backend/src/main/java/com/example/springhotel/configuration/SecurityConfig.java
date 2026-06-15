@@ -253,7 +253,7 @@ public class SecurityConfig {
 
         config.addAllowedOriginPattern("http://localhost:*");
         config.addAllowedOriginPattern("https://hotel-montpellier.netlify.app");
-        config.addAllowedOriginPattern("https://pastell-demo.netlify.app");
+        config.addAllowedOriginPattern("https://dashboard-pastell.netlify.app");
         config.addAllowedOriginPattern("https://*.netlify.app");
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");

@@ -24,7 +24,7 @@ L'authentification OAuth2 / OpenID Connect via Keycloak a été ajoutée parce q
 |---|---|
 | Application principale | [hotel-montpellier.netlify.app](https://hotel-montpellier.netlify.app) |
 | Documentation intégration | [hotel-montpellier.netlify.app/admin/docs](https://hotel-montpellier.netlify.app/admin/docs) |
-| Dashboard Pastell | [pastell-demo.netlify.app](https://pastell-demo.netlify.app) |
+| Dashboard Pastell (Vue 3 plus Vuetify) | [dashboard-pastell.netlify.app](https://dashboard-pastell.netlify.app) |
 
 **Comptes de démonstration (formulaire JWT maison) :**
 
