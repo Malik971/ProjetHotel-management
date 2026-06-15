@@ -169,9 +169,6 @@ function DemarcheTab() {
                     Durant ce projet, j'ai ete suivi par un enseignant de ma formation Dawan, qui a apporte son regard
                     pedagogique sur mes choix techniques.
                 </p>
-                <p>
-                    Je candidate chez Libriciel SCOP.
-                </p>
             </Section>
 
             <Section title="Pourquoi ce projet">
@@ -268,7 +265,7 @@ function DemarcheTab() {
                         </a>
                     </div>
                     <p className="text-xs text-gray-500 mt-4">
-                        Malik Ibo, candidat chez Libriciel SCOP.
+                        Malik Ibo, Concepteur développeur d'application.
                     </p>
                 </div>
             </Section>
@@ -756,7 +753,7 @@ const API_GROUPS = [
                 description: "Flux JWT maison : retourne un token HS256 pour les comptes locaux (demo@springhotel.fr, test@test.com).",
                 curl: `curl -s -X POST https://projethotel-management.onrender.com/api/v1/login \\
   -H "Content-Type: application/json" \\
-  -d '{"email":"test@test.com","password":"test123"}' | jq .`,
+  -d '{"email":"employe@springhotel.fr","password":"Employe971*"}' | jq .`,
             },
             {
                 method: "GET",
