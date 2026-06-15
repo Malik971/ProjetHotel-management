@@ -1,0 +1,27 @@
+{
+  "name": "dashboard-vue",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Dashboard de demonstration de l'integration Pastell, en Vue 3 plus Vuetify",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "vue": "^3.4.27",
+    "vue-router": "^4.3.2",
+    "vuetify": "^3.6.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.4.0",
+    "@vitejs/plugin-vue": "^5.0.5",
+    "eslint": "^9.4.0",
+    "eslint-plugin-vue": "^9.26.0",
+    "globals": "^15.4.0",
+    "vite": "^5.2.13"
+  }
+}

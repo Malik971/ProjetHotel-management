@@ -10,6 +10,8 @@ import com.example.springhotel.integration.pastell.entity.SyncStatus;
 import com.example.springhotel.integration.pastell.repository.PastellJournalEntryRecordRepository;
 import com.example.springhotel.integration.pastell.repository.PastellPollingCursorRepository;
 import com.example.springhotel.integration.pastell.repository.PastellSyncRepository;
+import com.example.springhotel.integration.pastell.client.PastellApiException;
+import com.example.springhotel.integration.pastell.client.PastellClient;
 import com.example.springhotel.integration.pastell.service.PastellInboundSyncService;
 import com.example.springhotel.integration.pastell.service.PastellSyncService;
 import com.example.springhotel.repository.ReservationRepository;
@@ -60,6 +62,14 @@ public class AdminPastellController {
     private final ObjectProvider<PastellInboundSyncService> inboundSyncServiceProvider;
     private final ObjectProvider<PastellSyncService> syncServiceProvider;
     private final ObjectProvider<PastellProperties> pastellPropertiesProvider;
+    private final ObjectProvider<PastellClient> pastellClientProvider;
+
+    /**
+     * Actions de demonstration acceptees, alignees sur la machine a etats du
+     * connecteur. Toute autre valeur est rejetee en 400 avant tout appel.
+     */
+    private static final List<String> ALLOWED_DEMO_ACTIONS =
+            List.of("validation", "confirmation", "terminaison", "annulation");
 
     @Value("${demo.admin-token:}")
     private String demoAdminToken;
@@ -75,7 +85,8 @@ public class AdminPastellController {
             PastellJournalEntryRecordRepository journalRecordRepository,
             ObjectProvider<PastellInboundSyncService> inboundSyncServiceProvider,
             ObjectProvider<PastellSyncService> syncServiceProvider,
-            ObjectProvider<PastellProperties> pastellPropertiesProvider) {
+            ObjectProvider<PastellProperties> pastellPropertiesProvider,
+            ObjectProvider<PastellClient> pastellClientProvider) {
         this.reservationRepository = reservationRepository;
         this.pastellSyncRepository = pastellSyncRepository;
         this.cursorRepository = cursorRepository;
@@ -83,6 +94,7 @@ public class AdminPastellController {
         this.inboundSyncServiceProvider = inboundSyncServiceProvider;
         this.syncServiceProvider = syncServiceProvider;
         this.pastellPropertiesProvider = pastellPropertiesProvider;
+        this.pastellClientProvider = pastellClientProvider;
     }
 
     // ============================================================
@@ -313,8 +325,93 @@ public class AdminPastellController {
     }
 
     // ============================================================
+    // DEMONSTRATION INTERACTIVE (dashboard-vue)
+    // ============================================================
+
+    /**
+     * Lit l'etat courant d'un dossier Pastell pour le dashboard de demonstration.
+     * <p>
+     * Passe par le connecteur serveur ({@link PastellClient}) : le navigateur ne
+     * contacte jamais le mock en direct, et n'a donc pas a calculer l'auth Basic
+     * rotative. Operation de lecture seule, sans X-Demo-Token.
+     */
+    @GetMapping("/pastell/demo/document/{idD}")
+    public ResponseEntity<?> getDemoDocument(@PathVariable String idD) {
+        PastellClient client = pastellClientProvider.getIfAvailable();
+        if (client == null) {
+            return pastellDisabled();
+        }
+        try {
+            return ResponseEntity.ok(client.getDocument(idD));
+        } catch (PastellApiException e) {
+            return pastellError(e);
+        }
+    }
+
+    /**
+     * Fait avancer un dossier d'une etape circuit, a la demande du visiteur.
+     * <p>
+     * C'est le coeur de la demo interactive : le visiteur declenche une transition
+     * (validation, confirmation, terminaison, annulation) et observe le diagramme
+     * s'allumer, puis le polling Sejour rattraper l'etat. Protege par X-Demo-Token
+     * comme les autres operations qui modifient l'etat du bus. Renvoie le nouvel
+     * etat du dossier pour rafraichir l'affichage sans second appel.
+     */
+    @PostMapping("/pastell/demo/document/{idD}/action")
+    public ResponseEntity<?> doDemoAction(
+            @PathVariable String idD,
+            @RequestBody DemoActionRequest request,
+            @RequestHeader(value = "X-Demo-Token", required = false) String providedToken) {
+
+        if (!isDemoTokenValid(providedToken)) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("error", "forbidden");
+            body.put("hint", "Header X-Demo-Token requis pour faire avancer un dossier.");
+            return ResponseEntity.status(403).body(body);
+        }
+
+        String action = request != null ? request.action() : null;
+        if (!ALLOWED_DEMO_ACTIONS.contains(action)) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("error", "bad_request");
+            body.put("hint", "Action invalide. Valeurs acceptees : " + ALLOWED_DEMO_ACTIONS);
+            return ResponseEntity.badRequest().body(body);
+        }
+
+        PastellClient client = pastellClientProvider.getIfAvailable();
+        if (client == null) {
+            return pastellDisabled();
+        }
+        try {
+            return ResponseEntity.ok(client.doAction(idD, action));
+        } catch (PastellApiException e) {
+            return pastellError(e);
+        }
+    }
+
+    // ============================================================
     // HELPERS
     // ============================================================
+
+    private ResponseEntity<Map<String, Object>> pastellDisabled() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", "Pastell integration disabled");
+        body.put("hint", "Set pastell.enabled=true to use this endpoint");
+        return ResponseEntity.status(503).body(body);
+    }
+
+    /**
+     * Traduit une PastellApiException en reponse HTTP. Si le connecteur a recu un
+     * statut de Pastell (ex: 400 pour une action incoherente avec l'etape courante),
+     * on le propage tel quel ; sinon, 502 Bad Gateway (panne reseau cote connecteur).
+     */
+    private ResponseEntity<Map<String, Object>> pastellError(PastellApiException e) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("error", "pastell_error");
+        body.put("hint", e.getMessage());
+        int status = e.hasHttpResponse() ? e.getStatusCode() : 502;
+        return ResponseEntity.status(status).body(body);
+    }
 
     private boolean isDemoTokenValid(String providedToken) {
         if (demoAdminToken == null || demoAdminToken.isBlank()) {
@@ -461,4 +558,11 @@ public class AdminPastellController {
                 .codeConfirmation(reservation.getCodeConfirmation())
                 .build();
     }
+}
+
+/**
+ * Corps de la requete d'action de demonstration : le nom de l'action a appliquer
+ * sur le dossier (validation, confirmation, terminaison, annulation).
+ */
+record DemoActionRequest(String action) {
 }

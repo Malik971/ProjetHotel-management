@@ -22,10 +22,10 @@ const SCENE_MS = 4600;
 
 // Etat metier illustre a chaque scene, avec son code couleur.
 const STATE_STYLE = {
-    pending: { label: "En traitement", dot: "bg-[#0EA5E9]", chip: "bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300" },
-    ok: { label: "OK", dot: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300" },
-    retry: { label: "Relance", dot: "bg-amber-500", chip: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300" },
-    error: { label: "Anomalie", dot: "bg-red-500", chip: "bg-red-100 text-red-800 dark:bg-red-500/20 dark:text-red-300" },
+    pending: { label: "En traitement", dot: "bg-[#0EA5E9]", chip: "bg-sky-100 text-sky-800" },
+    ok: { label: "OK", dot: "bg-emerald-500", chip: "bg-emerald-100 text-emerald-800" },
+    retry: { label: "Relance", dot: "bg-amber-500", chip: "bg-amber-100 text-amber-800" },
+    error: { label: "Anomalie", dot: "bg-red-500", chip: "bg-red-100 text-red-800" },
 };
 
 // Position du "dossier" sur la voie (reservation -> bus -> Pastell).
@@ -104,15 +104,13 @@ function PipelineNode({ icon: Icon, label, sub, isActive }) {
     return (
         <div className={`flex flex-col items-center gap-1.5 transition-all ${isActive ? "scale-105" : "opacity-60"}`}>
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-all ${
-                isActive
-                    ? "bg-white border-[#0EA5E9] shadow-sm ring-2 ring-[#0EA5E9]/20 dark:bg-gray-800"
-                    : "bg-white border-gray-200 dark:bg-gray-800 dark:border-gray-700"
+                isActive ? "bg-white border-[#0EA5E9] shadow-sm ring-2 ring-[#0EA5E9]/20" : "bg-white border-gray-200"
             }`}>
-                <Icon size={22} className={isActive ? "text-[#0EA5E9]" : "text-gray-400 dark:text-gray-500"} />
+                <Icon size={22} className={isActive ? "text-[#0EA5E9]" : "text-gray-400"} />
             </div>
             <div className="text-center leading-tight">
-                <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{label}</p>
-                <p className="text-[10px] text-gray-400 dark:text-gray-500">{sub}</p>
+                <p className="text-xs font-semibold text-gray-800">{label}</p>
+                <p className="text-[10px] text-gray-400">{sub}</p>
             </div>
         </div>
     );
@@ -121,15 +119,15 @@ function PipelineNode({ icon: Icon, label, sub, isActive }) {
 // eslint-disable-next-line no-unused-vars -- faux positif : Icon est rendu en JSX plus bas
 function Counter({ icon: Icon, iconColor, label, value, hint, highlight, highlightRing }) {
     return (
-        <div className={`rounded-xl border bg-white p-3 transition-all dark:bg-gray-800 ${
-            highlight ? `border-transparent ring-2 ${highlightRing} shadow-sm` : "border-gray-200 dark:border-gray-700"
+        <div className={`rounded-xl border bg-white p-3 transition-all ${
+            highlight ? `border-transparent ring-2 ${highlightRing} shadow-sm` : "border-gray-200"
         }`}>
             <div className="flex items-center gap-1.5">
                 <Icon size={14} className={iconColor} />
-                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{label}</span>
+                <span className="text-[11px] font-medium text-gray-500">{label}</span>
             </div>
-            <p className="mt-1 text-xl font-bold text-gray-900 tabular-nums dark:text-gray-100">{value}</p>
-            <p className="text-[10px] text-gray-400 leading-tight dark:text-gray-500">{hint}</p>
+            <p className="mt-1 text-xl font-bold text-gray-900 tabular-nums">{value}</p>
+            <p className="text-[10px] text-gray-400 leading-tight">{hint}</p>
         </div>
     );
 }
@@ -164,29 +162,29 @@ export default function PastellLifecycleDemo() {
     const tokenLeft = useMemo(() => STOP[scene.active] ?? "50%", [scene.active]);
 
     return (
-        <div className="bg-white dark:bg-gray-900">
+        <div className="bg-white">
             <style>{`@keyframes demoGrow { from { width: 0% } to { width: 100% } }`}</style>
 
             {/* En-tete + controles (pr-10 : laisse la place au bouton fermer de la modale) */}
             <div className="flex items-center justify-between gap-3 mb-1 pr-10">
                 <div className="flex items-center gap-2">
                     <Info size={16} className="text-[#0EA5E9]" />
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Demo guidee : le cycle de vie d'un dossier</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">Demo guidee : le cycle de vie d'un dossier</h3>
                 </div>
                 <div className="flex items-center gap-1">
                     <button onClick={() => setPlaying((p) => !p)} title={playing ? "Pause" : "Lecture"}
-                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors dark:text-gray-400 dark:hover:bg-gray-800">
+                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
                         {playing ? <Pause size={15} /> : <Play size={15} />}
                     </button>
                     <button onClick={restart} title="Recommencer"
-                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors dark:text-gray-400 dark:hover:bg-gray-800">
+                        className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
                         <RotateCcw size={15} />
                     </button>
                 </div>
             </div>
 
             {/* Barre de progression de la scene (se remplit puis enchaine) */}
-            <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden mb-5 dark:bg-gray-800">
+            <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden mb-5">
                 <div
                     key={`${index}-${playing}`}
                     className="h-full bg-[#0EA5E9]"
@@ -195,7 +193,7 @@ export default function PastellLifecycleDemo() {
             </div>
 
             {/* Voie : Reservation -> Bus -> Pastell, avec le dossier qui se deplace */}
-            <div className="rounded-2xl border border-gray-100 bg-[#F8FAFC] p-5 mb-4 dark:border-gray-800 dark:bg-gray-800/40">
+            <div className="rounded-2xl border border-gray-100 bg-[#F8FAFC] p-5 mb-4">
                 <div className="grid grid-cols-3 items-start">
                     <PipelineNode icon={Calendar} label="Reservation" sub="cote Sejour" isActive={scene.active === "reservation"} />
                     <PipelineNode icon={Cpu} label="Bus Pastell" sub="orchestration" isActive={scene.active === "bus"} />
@@ -204,7 +202,7 @@ export default function PastellLifecycleDemo() {
 
                 {/* La voie + le jeton "dossier" */}
                 <div className="relative mt-4 h-7">
-                    <div className="absolute top-1/2 left-[8%] right-[8%] h-0.5 -translate-y-1/2 bg-gray-200 dark:bg-gray-700" />
+                    <div className="absolute top-1/2 left-[8%] right-[8%] h-0.5 -translate-y-1/2 bg-gray-200" />
                     <div
                         className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-700 ease-in-out"
                         style={{ left: tokenLeft }}
@@ -215,7 +213,7 @@ export default function PastellLifecycleDemo() {
                                 {style.label}
                             </span>
                         ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500 shadow-sm dark:bg-gray-700 dark:text-gray-300">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500 shadow-sm">
                                 Dossier
                             </span>
                         )}
@@ -240,7 +238,7 @@ export default function PastellLifecycleDemo() {
             </div>
 
             {/* Legende de la scene : titre, explication, et raison si echec */}
-            <div className="rounded-2xl border border-gray-100 p-4 dark:border-gray-800">
+            <div className="rounded-2xl border border-gray-100 p-4">
                 <div className="flex items-center gap-2 mb-1.5">
                     {style && (
                         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${style.chip}`}>
@@ -248,13 +246,13 @@ export default function PastellLifecycleDemo() {
                             {style.label}
                         </span>
                     )}
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{scene.title}</h4>
+                    <h4 className="text-sm font-semibold text-gray-900">{scene.title}</h4>
                 </div>
-                <p className="text-sm text-gray-600 leading-relaxed dark:text-gray-300">{scene.text}</p>
+                <p className="text-sm text-gray-600 leading-relaxed">{scene.text}</p>
                 {scene.reason && (
-                    <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2 dark:bg-red-500/10 dark:border-red-500/20">
+                    <div className="mt-2.5 flex items-start gap-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2">
                         <AlertTriangle size={14} className="text-red-500 mt-0.5 shrink-0" />
-                        <p className="text-xs text-red-700 dark:text-red-300"><span className="font-semibold">Pourquoi :</span> {scene.reason}</p>
+                        <p className="text-xs text-red-700"><span className="font-semibold">Pourquoi :</span> {scene.reason}</p>
                     </div>
                 )}
             </div>
@@ -267,7 +265,7 @@ export default function PastellLifecycleDemo() {
                         onClick={() => goTo(i)}
                         aria-label={`Aller a l'etape ${i + 1}`}
                         className={`h-1.5 rounded-full transition-all ${
-                            i === index ? "w-6 bg-[#0EA5E9]" : "w-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                            i === index ? "w-6 bg-[#0EA5E9]" : "w-1.5 bg-gray-200 hover:bg-gray-300"
                         }`}
                     />
                 ))}
