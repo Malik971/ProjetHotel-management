@@ -232,7 +232,7 @@ export default function AdminDashboard() {
                             </Link>
 
                             <a
-                                href="https://pastell-demo.netlify.app"
+                                href="https://dashboard-pastell.netlify.app"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center justify-between gap-2 px-3 py-2.5 bg-[#F8FAFC] border border-gray-200 rounded-xl text-gray-900 text-sm font-medium hover:border-[#0EA5E9] hover:bg-sky-50 transition-all"
