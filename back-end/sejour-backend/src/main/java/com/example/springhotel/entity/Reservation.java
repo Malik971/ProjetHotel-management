@@ -17,7 +17,7 @@ public class Reservation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Dates de réservation
+    // Dates de reservation
     @Column(nullable = false)
     private LocalDate dateDebut;
 
@@ -34,15 +34,15 @@ public class Reservation {
     @Column(nullable = false)
     private String telephoneClient;
 
-    // Nombre de personnes (peut différer de la capacité max de la chambre)
+    // Nombre de personnes
     @Column(nullable = false)
     private Integer nombrePersonnes;
 
-    // Prix total de la réservation (calculé selon le nombre de nuits)
+    // Prix total de la reservation
     @Column(nullable = false)
     private Double prixTotal;
 
-    // Statut de la réservation
+    // Statut de la reservation
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -52,19 +52,41 @@ public class Reservation {
     @Column(unique = true)
     private String codeConfirmation;
 
+    // -------------------------------------------------------------------
+    // Champs de signature electronique.
+    //
+    // signaturePdfBase64 : recepisse PDF encode en base64, produit par
+    //   SignatureService apres apposition. NULL jusqu'a SIGNATURE_APPOSEE.
+    //   Point de migration niveau 3 : au lieu d'etre genere localement, ce
+    //   PDF sera retourne par le mock parapheur via son API REST.
+    //
+    // nomSignataire : nom de l'agent tel que saisi sur la page de signature.
+    //
+    // signedAt : horodatage UTC de l'apposition. Immutable apres ecriture.
+    // -------------------------------------------------------------------
+
+    @Column(columnDefinition = "TEXT")
+    private String signaturePdfBase64;
+
+    @Column(length = 255)
+    private String nomSignataire;
+
+    @Column
+    private LocalDateTime signedAt;
+
     // Relation avec Chambre (ManyToOne)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chambre_id", nullable = false)
     @JsonIgnore
     private Chambre chambre;
 
-    // Relation avec User (ManyToOne) - Optionnel si l'utilisateur n'est pas connecté
+    // Relation avec User (ManyToOne) - optionnel si non connecte
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     @JsonIgnore
     private Users users;
 
-    // Métadonnées
+    // Metadonnees
     @Column(nullable = false, updatable = false)
     private LocalDateTime dateCreation;
 
@@ -73,11 +95,26 @@ public class Reservation {
         this.dateCreation = LocalDateTime.now();
     }
 
-    // Enum pour le statut de réservation
+    /**
+     * Etats du dossier de reservation.
+     *
+     * Transitions valides (niveau 2) :
+     *   EN_ATTENTE -> SIGNATURE_EN_COURS -> SIGNATURE_APPOSEE -> CONFIRMEE
+     *   EN_ATTENTE -> ANNULEE
+     *   SIGNATURE_EN_COURS -> ANNULEE
+     *   CONFIRMEE -> TERMINEE
+     *   CONFIRMEE -> ANNULEE
+     *
+     * Au niveau 3 (mock parapheur distant), SIGNATURE_EN_COURS correspond
+     * au document envoye au parapheur et SIGNATURE_APPOSEE au webhook de
+     * retour confirme par le parapheur.
+     */
     public enum StatutReservation {
-        EN_ATTENTE,      // Réservation en attente de confirmation
-        CONFIRMEE,       // Réservation confirmée
-        ANNULEE,         // Réservation annulée
-        TERMINEE         // Séjour terminé
+        EN_ATTENTE,           // Cree, en attente de validation admin
+        SIGNATURE_EN_COURS,   // Page de signature ouverte par l'admin
+        SIGNATURE_APPOSEE,    // Signature apposee, PDF genere
+        CONFIRMEE,            // Dossier valide et confirme au client
+        ANNULEE,              // Annule (a tout moment avant TERMINEE)
+        TERMINEE              // Sejour termine
     }
 }

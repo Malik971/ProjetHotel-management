@@ -28,6 +28,8 @@ import AdminChambres from "./Pages/admin/AdminChambres";
 import AdminDocs from "./Pages/admin/AdminDocs";
 import AdminPastellList from "./Pages/admin/AdminPastellList";
 import AdminPastellDetail from "./Pages/admin/AdminPastellDetail";
+import AdminReservationsEnAttente from "./Pages/admin/AdminReservationsEnAttente";
+import AdminSignaturePage from "./Pages/admin/AdminSignaturePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -115,6 +117,25 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* Workflow de validation avec signature */}
+          <Route
+            path="/admin/reservations/en-attente"
+            element={
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
+                <AdminReservationsEnAttente />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reservations/:id/signer"
+            element={
+              <ProtectedRoute roleRequired="ROLE_EMPLOYE">
+                <AdminSignaturePage />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/admin/add-users"
             element={

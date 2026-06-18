@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -32,6 +33,11 @@ public class ReservationResponseDTO {
     private BigDecimal prixTotal;
     private Reservation.StatutReservation statut;
     private String codeConfirmation;
+
+    // Champs de signature electronique (null si non encore signe)
+    private String nomSignataire;
+    private LocalDateTime signedAt;
+    private boolean pdfDisponible;
 
     // Méthodes utilitaires pour compatibilité
     public LocalDate getDateArrivee() {

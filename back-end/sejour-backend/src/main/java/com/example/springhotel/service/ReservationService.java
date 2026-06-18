@@ -9,6 +9,7 @@ import com.example.springhotel.repository.ChambreRepository;
 import com.example.springhotel.repository.ReservationRepository;
 import com.example.springhotel.repository.UserRepository;
 import com.example.springhotel.reservation.event.ReservationCreatedEvent;
+import com.example.springhotel.reservation.event.StatutChangeEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -26,36 +27,39 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ChambreRepository chambreRepository;
     private final UserRepository userRepository;
-    private final EmailService emailService;
-
-    /**
-     * Publisher d'evenements Spring.
-     *
-     * Utilise pour notifier les autres composants (ex. integration Pastell)
-     * qu'une reservation vient d'etre creee, SANS coupler ReservationService
-     * a ces composants. Spring l'injecte automatiquement via Lombok @RequiredArgsConstructor.
-     */
     private final ApplicationEventPublisher eventPublisher;
 
+    /**
+     * Cree une nouvelle reservation et la place en statut EN_ATTENTE.
+     *
+     * Pourquoi EN_ATTENTE et non CONFIRMEE directement ?
+     *   - Avant ce lot, le statut passait a CONFIRMEE a la creation, ce qui
+     *     court-circuitait la validation admin et rendait Pastell decoratif.
+     *   - Desormais, le circuit est : creation (EN_ATTENTE) -> validation admin
+     *     avec signature (SIGNATURE_EN_COURS -> SIGNATURE_APPOSEE) -> CONFIRMEE.
+     *   - Pastell orchestre cette validation : il recoit le dossier des la creation
+     *     et notifie Spring a chaque changement d'etape circuit, rendant l'integration
+     *     reelle et observable.
+     */
     @Transactional
     public ReservationResponseDTO creerReservation(ReservationRequestDTO request, String userEmail) {
-        // 1. Récupérer la chambre
-        Chambre chambre = chambreRepository.findById(request.getChambreId())
-                .orElseThrow(() -> new RuntimeException("Chambre non trouvée"));
 
-        // 2. Récupérer l'utilisateur (optionnel si connecté)
+        // 1. Recuperer la chambre
+        Chambre chambre = chambreRepository.findById(request.getChambreId())
+                .orElseThrow(() -> new RuntimeException("Chambre non trouvee"));
+
+        // 2. Recuperer l'utilisateur (optionnel)
         Users users = null;
         if (userEmail != null) {
             users = userRepository.findByEmail(userEmail).orElse(null);
         }
 
-        // 3. Vérifier la disponibilité
+        // 3. Verifier la disponibilite
         boolean disponible = verifierDisponibilite(
                 request.getChambreId(),
                 request.getDateDebut(),
                 request.getDateFin()
         );
-
         if (!disponible) {
             throw new RuntimeException("Chambre non disponible pour ces dates");
         }
@@ -64,10 +68,10 @@ public class ReservationService {
         long nombreNuits = ChronoUnit.DAYS.between(request.getDateDebut(), request.getDateFin());
         double prixTotal = chambre.getPrixParNuit().doubleValue() * nombreNuits;
 
-        // 5. Générer un code de confirmation
+        // 5. Generer un code de confirmation
         String codeConfirmation = genererCodeConfirmation();
 
-        // 6. Créer la réservation
+        // 6. Creer la reservation en EN_ATTENTE (pas CONFIRMEE : voir javadoc classe)
         Reservation reservation = Reservation.builder()
                 .chambre(chambre)
                 .users(users)
@@ -78,32 +82,27 @@ public class ReservationService {
                 .telephoneClient(request.getTelephoneClient())
                 .nombrePersonnes(request.getNombrePersonnes())
                 .prixTotal(prixTotal)
-                .statut(Reservation.StatutReservation.CONFIRMEE)
+                .statut(Reservation.StatutReservation.EN_ATTENTE)
                 .codeConfirmation(codeConfirmation)
                 .build();
 
         // 7. Sauvegarder
         Reservation saved = reservationRepository.save(reservation);
 
-        // 8. Publier l'evenement de creation.
-        //    Pas de try/catch : si la publication echoue, on veut que toute la
-        //    transaction soit rollback (sinon on aurait une reservation persistee
-        //    sans avoir notifie les autres composants).
-        //    Note : avec @TransactionalEventListener(AFTER_COMMIT) cote listener
-        //    (Paquet 4), Spring met l'evenement en attente jusqu'au commit reussi
-        //    de cette transaction. Si le commit echoue, le listener n'est jamais
-        //    invoque. C'est exactement le comportement voulu pour eviter de creer
-        //    un dossier Pastell pour une reservation qui n'a pas survecu.
+        // 8. Publier l'evenement de creation (pour Pastell, APRES commit).
+        //    TransactionalEventListener AFTER_COMMIT cote listener : si la transaction
+        //    echoue, le listener n'est jamais invoque.
         eventPublisher.publishEvent(new ReservationCreatedEvent(saved.getId()));
 
-        // 9. Envoyer l'email de confirmation
-        try {
-            emailService.envoyerEmailConfirmation(saved);
-        } catch (Exception e) {
-            System.err.println("⚠️ Erreur envoi email (réservation créée quand même) : " + e.getMessage());
-        }
+        // 9. Notifier le client : "votre demande est en cours de traitement".
+        //    Decouple via evenement : le listener envoie l'email hors transaction.
+        eventPublisher.publishEvent(new StatutChangeEvent(
+                saved.getId(),
+                null,
+                Reservation.StatutReservation.EN_ATTENTE
+        ));
 
-        // 10. Convertir en DTO et retourner
+        // 10. Retourner le DTO
         return convertToDTO(saved);
     }
 
@@ -115,7 +114,7 @@ public class ReservationService {
         return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    private ReservationResponseDTO convertToDTO(Reservation reservation) {
+    public ReservationResponseDTO convertToDTO(Reservation reservation) {
         return ReservationResponseDTO.builder()
                 .id(reservation.getId())
                 .userId(reservation.getUsers() != null ? reservation.getUsers().getId() : null)
@@ -138,6 +137,9 @@ public class ReservationService {
                 .prixTotal(BigDecimal.valueOf(reservation.getPrixTotal()))
                 .statut(reservation.getStatut())
                 .codeConfirmation(reservation.getCodeConfirmation())
+                .nomSignataire(reservation.getNomSignataire())
+                .signedAt(reservation.getSignedAt())
+                .pdfDisponible(reservation.getSignaturePdfBase64() != null)
                 .build();
     }
 }
