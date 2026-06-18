@@ -266,59 +266,87 @@ public class ClientReservationController {
      *   <li>Si statut TERMINEE : toutes les etapes DONE</li>
      * </ul>
      */
+    /**
+     * Construit la timeline experience voyageur en 4 etapes.
+     *
+     * Avec le nouveau workflow de validation par signature, la timeline a ete
+     * retravaillee pour refleter fidelement les 6 statuts possibles :
+     *
+     * EN_ATTENTE / SIGNATURE_EN_COURS / SIGNATURE_APPOSEE :
+     *   1. Demande recue             DONE   (soumise)
+     *   2. Validation par notre equipe  CURRENT (en attente de l'admin)
+     *   3. Reservation confirmee     PENDING
+     *   4. Sejour                    PENDING
+     *
+     * CONFIRMEE (a venir / pendant / apres) :
+     *   1. Demande recue             DONE
+     *   2. Reservation confirmee     DONE
+     *   3. Preparation / Sejour en cours  CURRENT selon les dates
+     *   4. Sejour termine            CURRENT ou PENDING
+     *
+     * ANNULEE :
+     *   1. Reservation annulee       ERROR
+     *   2-4. PENDING
+     *
+     * TERMINEE : toutes DONE
+     */
     private List<TimelineEtapeDTO> buildEtapesSejour(Reservation reservation) {
         Reservation.StatutReservation statut = reservation.getStatut();
         LocalDate aujourdhui = LocalDate.now();
         LocalDate dateDebut = reservation.getDateDebut();
         LocalDate dateFin = reservation.getDateFin();
 
-        // Date de creation pour l'etape 1
         Instant dateCreation = reservation.getDateCreation() != null
                 ? reservation.getDateCreation().toInstant(ZoneOffset.UTC)
                 : null;
 
-        // Cas particulier : reservation annulee
+        // --- ANNULEE ---
         if (statut == Reservation.StatutReservation.ANNULEE) {
             return List.of(
                     new TimelineEtapeDTO(1, "Reservation annulee", "ERROR", dateCreation),
-                    new TimelineEtapeDTO(2, "Preparation de votre arrivee", "PENDING", null),
-                    new TimelineEtapeDTO(3, "Sejour en cours", "PENDING", null),
-                    new TimelineEtapeDTO(4, "Sejour termine", "PENDING", null)
+                    new TimelineEtapeDTO(2, "Validation par notre equipe", "PENDING", null),
+                    new TimelineEtapeDTO(3, "Reservation confirmee", "PENDING", null),
+                    new TimelineEtapeDTO(4, "Sejour", "PENDING", null)
             );
         }
 
-        // Cas particulier : reservation terminee
+        // --- TERMINEE ---
         if (statut == Reservation.StatutReservation.TERMINEE) {
             Instant fin = dateFin != null
                     ? dateFin.atStartOfDay(ZoneId.systemDefault()).toInstant()
                     : null;
             return List.of(
-                    new TimelineEtapeDTO(1, "Reservation confirmee", "DONE", dateCreation),
-                    new TimelineEtapeDTO(2, "Preparation de votre arrivee", "DONE", null),
+                    new TimelineEtapeDTO(1, "Demande recue", "DONE", dateCreation),
+                    new TimelineEtapeDTO(2, "Reservation confirmee", "DONE", null),
                     new TimelineEtapeDTO(3, "Sejour en cours", "DONE", null),
                     new TimelineEtapeDTO(4, "Sejour termine", "DONE", fin)
             );
         }
 
-        // Cas particulier : reservation non encore confirmee
-        if (statut != Reservation.StatutReservation.CONFIRMEE) {
+        // --- EN_ATTENTE / SIGNATURE_EN_COURS / SIGNATURE_APPOSEE ---
+        // La reservation a ete soumise mais pas encore validee par un admin.
+        // On affiche une etape "Validation en cours" pour ne pas induire en
+        // erreur le client en affichant "Reservation confirmee" alors qu'elle
+        // ne l'est pas encore.
+        if (statut == Reservation.StatutReservation.EN_ATTENTE
+                || statut == Reservation.StatutReservation.SIGNATURE_EN_COURS
+                || statut == Reservation.StatutReservation.SIGNATURE_APPOSEE) {
             return List.of(
-                    new TimelineEtapeDTO(1, "Reservation confirmee", "CURRENT", null),
-                    new TimelineEtapeDTO(2, "Preparation de votre arrivee", "PENDING", null),
-                    new TimelineEtapeDTO(3, "Sejour en cours", "PENDING", null),
-                    new TimelineEtapeDTO(4, "Sejour termine", "PENDING", null)
+                    new TimelineEtapeDTO(1, "Demande recue", "DONE", dateCreation),
+                    new TimelineEtapeDTO(2, "Validation par notre equipe", "CURRENT", null),
+                    new TimelineEtapeDTO(3, "Reservation confirmee", "PENDING", null),
+                    new TimelineEtapeDTO(4, "Sejour", "PENDING", null)
             );
         }
 
-        // Cas confirmee : on calcule l'etape courante selon les dates
+        // --- CONFIRMEE : calcul selon les dates ---
         List<TimelineEtapeDTO> etapes = new ArrayList<>();
-        etapes.add(new TimelineEtapeDTO(1, "Reservation confirmee", "DONE", dateCreation));
+        etapes.add(new TimelineEtapeDTO(1, "Demande recue", "DONE", dateCreation));
 
         if (dateDebut == null || dateFin == null) {
-            // Securite : si les dates manquent, on s'arrete la
-            etapes.add(new TimelineEtapeDTO(2, "Preparation de votre arrivee", "PENDING", null));
-            etapes.add(new TimelineEtapeDTO(3, "Sejour en cours", "PENDING", null));
-            etapes.add(new TimelineEtapeDTO(4, "Sejour termine", "PENDING", null));
+            etapes.add(new TimelineEtapeDTO(2, "Reservation confirmee", "DONE", null));
+            etapes.add(new TimelineEtapeDTO(3, "Preparation de votre arrivee", "PENDING", null));
+            etapes.add(new TimelineEtapeDTO(4, "Sejour", "PENDING", null));
             return etapes;
         }
 
@@ -326,29 +354,19 @@ public class ClientReservationController {
         boolean enSejour = !aujourdhui.isBefore(dateDebut) && !aujourdhui.isAfter(dateFin);
         boolean sejourPasse = aujourdhui.isAfter(dateFin);
 
-        // Etape 2 : preparation
-        String etape2Statut;
-        if (sejourPasse || enSejour) {
-            etape2Statut = "DONE";
-        } else if (joursAvantArrivee <= JOURS_AVANT_PREPARATION) {
-            etape2Statut = "CURRENT";
-        } else {
-            etape2Statut = "PENDING";
-        }
-        etapes.add(new TimelineEtapeDTO(2, "Preparation de votre arrivee", etape2Statut, null));
+        etapes.add(new TimelineEtapeDTO(2, "Reservation confirmee", "DONE", null));
 
-        // Etape 3 : sejour en cours
-        String etape3Statut;
-        Instant etape3Date = null;
+        // Etape 3 : preparation ou sejour en cours
         if (sejourPasse) {
-            etape3Statut = "DONE";
+            etapes.add(new TimelineEtapeDTO(3, "Sejour en cours", "DONE", null));
         } else if (enSejour) {
-            etape3Statut = "CURRENT";
-            etape3Date = dateDebut.atStartOfDay(ZoneId.systemDefault()).toInstant();
+            Instant debutInstant = dateDebut.atStartOfDay(ZoneId.systemDefault()).toInstant();
+            etapes.add(new TimelineEtapeDTO(3, "Sejour en cours", "CURRENT", debutInstant));
+        } else if (joursAvantArrivee <= JOURS_AVANT_PREPARATION) {
+            etapes.add(new TimelineEtapeDTO(3, "Preparation de votre arrivee", "CURRENT", null));
         } else {
-            etape3Statut = "PENDING";
+            etapes.add(new TimelineEtapeDTO(3, "Preparation de votre arrivee", "PENDING", null));
         }
-        etapes.add(new TimelineEtapeDTO(3, "Sejour en cours", etape3Statut, etape3Date));
 
         // Etape 4 : sejour termine
         String etape4Statut = sejourPasse ? "CURRENT" : "PENDING";

@@ -100,8 +100,10 @@ class PastellPollingEndToEndTest extends PastellEndToEndTestBase {
         ReservationRequestDTO request = buildReservationRequest();
         ReservationResponseDTO response = reservationService.creerReservation(request, null);
 
-        // Verification : la reservation est creee et le sync montant est OK
-        assertThat(response.getStatut()).isEqualTo(StatutReservation.CONFIRMEE);
+        // Verification : la reservation est creee en EN_ATTENTE (depuis le lot signature,
+        // la confirmation exige un visa admin - la panne Pastell ne bloque pas la creation)
+        // et le sync montant est OK.
+        assertThat(response.getStatut()).isEqualTo(StatutReservation.EN_ATTENTE);
         Optional<PastellSync> syncAvantPoll = pastellSyncRepository.findByReservationId(response.getId());
         assertThat(syncAvantPoll).isPresent();
         assertThat(syncAvantPoll.get().getSyncStatus()).isEqualTo(SyncStatus.OK);

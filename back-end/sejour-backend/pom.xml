@@ -52,6 +52,17 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
+
+        <!-- Generation PDF cote serveur (signature electronique niveau 2).
+             OpenPDF : fork Apache 2.0 de l'ancien iText 2.x, leger et sans contrainte
+             de licence AGPL. Utilise dans SignatureService pour produire le recepisse
+             signe. Au niveau 3 (mock parapheur), ce bloc reste present mais n'est
+             appele que si le service local est actif. -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>1.4.2</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>

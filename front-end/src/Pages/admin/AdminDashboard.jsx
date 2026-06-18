@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
     CheckCircle2, Clock, RefreshCw, AlertTriangle, ArrowRight,
     List, BookOpen, ExternalLink, ArrowUp, Activity, ArrowLeft,
-    UserPlus, Building2, BedDouble, BarChart3, PlayCircle, X
+    UserPlus, Building2, BedDouble, BarChart3, PlayCircle, X, PenLine
 } from "lucide-react";
 
 import StatusBadge from "../../components/admin/StatusBadge";
@@ -186,6 +186,22 @@ export default function AdminDashboard() {
                         </h3>
 
                         <div className="flex flex-col gap-2">
+                            <Link
+                                to="/admin/reservations/en-attente"
+                                className="flex items-center justify-between gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-gray-900 text-sm font-medium hover:border-amber-400 hover:bg-amber-100 transition-all"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <PenLine size={16} className="text-amber-600" />
+                                    Dossiers a valider
+                                    {enTraitement > 0 && (
+                                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-xs font-bold">
+                                            {enTraitement}
+                                        </span>
+                                    )}
+                                </span>
+                                <ArrowRight size={14} className="text-gray-400" />
+                            </Link>
+
                             <button
                                 onClick={() => setDemoOpen(true)}
                                 className="flex items-center justify-between gap-2 px-3 py-2.5 bg-sky-50 border border-[#0EA5E9]/30 rounded-xl text-gray-900 text-sm font-medium hover:border-[#0EA5E9] hover:bg-sky-100 transition-all"
@@ -292,6 +308,12 @@ export default function AdminDashboard() {
                         Gestion du site
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <AdminQuickCard
+                            icon={PenLine}
+                            title="Dossiers a valider"
+                            subtitle={enTraitement > 0 ? `${enTraitement} en attente de signature` : "Aucun dossier en attente"}
+                            onClick={() => navigate("/admin/reservations/en-attente")}
+                        />
                         <AdminQuickCard
                             icon={UserPlus}
                             title="Ajouter un utilisateur"

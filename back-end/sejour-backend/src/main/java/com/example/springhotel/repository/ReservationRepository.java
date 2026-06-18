@@ -6,7 +6,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -111,4 +114,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("userId") Long userId,
             @Param("today") LocalDate today
     );
+    /**
+     * Recuperer les reservations correspondant a plusieurs statuts, paginees.
+     * Utilise par AdminSignatureController pour la liste des dossiers a valider
+     * (EN_ATTENTE et SIGNATURE_EN_COURS).
+     */
+    Page<Reservation> findByStatutIn(Collection<Reservation.StatutReservation> statuts, Pageable pageable);
 }
