@@ -67,11 +67,15 @@ class PastellEndToEndFailureTest extends PastellEndToEndTestBase {
         ReservationRequestDTO request = buildReservationRequest();
         ReservationResponseDTO response = reservationService.creerReservation(request, null);
 
-        // Assert 1 : la reservation a bien ete creee malgre l'echec Pastell
+        // Assert 1 : la reservation a bien ete creee malgre l'echec Pastell.
+        // Depuis le lot signature, la creation place le dossier en EN_ATTENTE
+        // (pas CONFIRMEE directement) : un admin doit valider avant confirmation.
+        // Le principe "Spring autorite, Pastell satellite" est toujours garanti :
+        // la panne Pastell n'a pas empeche la creation de la reservation.
         assertThat(response).isNotNull();
         assertThat(response.getId()).isNotNull();
         assertThat(response.getCodeConfirmation()).isNotBlank();
-        assertThat(response.getStatut().toString()).isEqualTo("CONFIRMEE");
+        assertThat(response.getStatut().toString()).isEqualTo("EN_ATTENTE");
 
         // Assert 2 : Pastell a bien ete appele (l'integration n'a pas ete skip)
         wireMock.verify(postRequestedFor(urlPathEqualTo("/api/v2/entite/1/document")));
