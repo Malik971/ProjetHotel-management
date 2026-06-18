@@ -112,7 +112,7 @@ export default function AdminSignaturePage() {
             link.href = `data:application/pdf;base64,${data.pdfBase64}`;
             link.download = `recepisse-${reservation?.codeConfirmation ?? id}.pdf`;
             link.click();
-        } catch (e) {
+        } catch {
             toast.error("Impossible de telecharger le PDF.");
         }
     }
