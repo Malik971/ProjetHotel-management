@@ -211,6 +211,13 @@ function DemarcheTab() {
                         configure, client PKCE, Resource Server Spring Boot, coexistence avec le JWT maison existant.
                         L'onglet <strong>Securite</strong> detaille cette integration.
                     </Bullet>
+                    <Bullet title="Signature electronique avec generation PDF.">
+                        Plutot qu'un simple bouton "valider", j'ai mis en place un workflow complet :
+                        l'agent saisit son nom, trace sa signature sur un canvas HTML5, et le backend
+                        genere un recepisse PDF signe avec toutes les informations du dossier. Ce mecanisme
+                        est concu pour etre remplace par un appel au mock parapheur (niveau 3) sans modifier
+                        le reste de l'architecture.
+                    </Bullet>
                 </ul>
             </Section>
 
@@ -228,8 +235,11 @@ function DemarcheTab() {
                     d'orchestration), construire mes propres methodes pour les ressentir de l'interieur.
                 </p>
                 <p>
-                    Cote code, des choses ne sont pas finalisees : pas de paiement reel, pas d'email transactionnel,
-                    et un compte admin qui a trop de pouvoirs. Ces points sont identifies, ils ne sont pas oublies.
+                    Cote code, des choses ne sont pas finalisees : pas de paiement reel et un compte
+                    admin qui a trop de pouvoirs. Ces points sont identifies, ils ne sont pas oublies.
+                    En revanche, le workflow de validation par signature electronique est fonctionnel de bout
+                    en bout : chaque transition de statut declenche une notification email au client, et
+                    le recepisse PDF signe est genere et archivable.
                 </p>
             </Section>
 
@@ -298,7 +308,7 @@ function ArchitectureTab() {
 
             <section>
                 <h2 className="text-lg font-semibold text-gray-900 mb-3">
-                    Les trois moments cles (flux Pastell)
+                    Les quatre moments cles (flux Pastell)
                 </h2>
                 <div className="space-y-4 text-sm text-gray-700">
                     <FlowItem index="1" title="Creation montante (Sejour vers Pastell)">
@@ -307,14 +317,24 @@ function ArchitectureTab() {
                         declenche un appel HTTP vers Pastell pour creer un dossier. Le mock renvoie un{" "}
                         <Code>id_d</Code>{" "}
                         que Sejour persiste dans la table <Code>pastell_sync</Code>.
+                        La reservation est placee en statut <Code>EN_ATTENTE</Code> : elle n'est
+                        pas encore confirmee.
                     </FlowItem>
-                    <FlowItem index="2" title="Polling descendant (Pastell vers Sejour)">
+                    <FlowItem index="2" title="Validation par signature electronique">
+                        Un agent ouvre le dossier dans l'espace admin, verifie les informations, saisit
+                        son nom et appose sa signature manuscrite sur un canvas HTML5. Le backend genere
+                        un recepisse PDF signe, passe le dossier a <Code>CONFIRMEE</Code> et notifie
+                        le client par email. Cette etape simule le visa du parapheur electronique
+                        (iparapheur dans l'ecosysteme Libriciel) : un document ne peut etre confirme
+                        sans intervention humaine tracee.
+                    </FlowItem>
+                    <FlowItem index="3" title="Polling descendant (Pastell vers Sejour)">
                         Toutes les 30 secondes, Sejour interroge l'endpoint{" "}
                         <Code>GET /api/v2/journal?since_id_j=N</Code>{" "}
                         du mock pour recuperer les nouvelles entrees de journal. Un curseur en base
                         garantit qu'on ne retraite jamais une entree deja vue.
                     </FlowItem>
-                    <FlowItem index="3" title="Relance sur anomalie">
+                    <FlowItem index="4" title="Relance sur anomalie">
                         Quand un dossier echoue (timeout, 5xx, divergence), il passe en statut{" "}
                         <Code>EN_RETRY</Code>{" "}
                         puis <Code>EN_ERREUR</Code>.
@@ -332,7 +352,8 @@ function ArchitectureTab() {
                     Regle d'or : Spring est l'autorite metier
                 </h2>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 leading-relaxed">
-                    Le statut metier d'une reservation (EN_ATTENTE, CONFIRMEE, ANNULEE, TERMINEE) est
+                    Le statut metier d'une reservation (EN_ATTENTE, SIGNATURE_EN_COURS, SIGNATURE_APPOSEE,
+                    CONFIRMEE, ANNULEE, TERMINEE) est
                     decide cote Spring, jamais cote Pastell. Pastell est un satellite : il enregistre,
                     il transmet, il signale. Il ne dicte pas le metier. Cette regle est inscrite dans
                     le code via la separation stricte entre <Code>Reservation.statut</Code>{" "}
@@ -424,7 +445,7 @@ function ArchitectureSvg() {
                     Spring Boot 4 + JPA
                 </text>
                 <text x="400" y="252" textAnchor="middle" fontSize="11" fill="#64748B">
-                    Render + PostgreSQL
+                    Railway + PostgreSQL
                 </text>
             </g>
 
@@ -439,7 +460,7 @@ function ArchitectureSvg() {
                     Service satellite
                 </text>
                 <text x="685" y="252" textAnchor="middle" fontSize="11" fill="#64748B">
-                    Render, port 8090
+                    Railway, port 8090
                 </text>
             </g>
 
@@ -751,7 +772,7 @@ const API_GROUPS = [
                 method: "POST",
                 path: "/api/v1/login",
                 description: "Flux JWT maison : retourne un token HS256 pour les comptes locaux (demo@springhotel.fr, test@test.com).",
-                curl: `curl -s -X POST https://projethotel-management.onrender.com/api/v1/login \\
+                curl: `curl -s -X POST https://sejour-backend-production.up.railway.app/api/v1/login \\
   -H "Content-Type: application/json" \\
   -d '{"email":"employe@springhotel.fr","password":"Employe971*"}' | jq .`,
             },
@@ -775,7 +796,7 @@ const API_GROUPS = [
                 path: "/api/admin/pastell/status",
                 description: "Snapshot global : compteurs par etape circuit, curseur de polling, ping du mock. Requiert SCOPE_pastell-admin (token Keycloak) ou ROLE_ADMIN (token JWT maison).",
                 curl: `# Avec un token Keycloak (scope pastell-admin requis)
-curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \\
+curl -s "https://sejour-backend-production.up.railway.app/api/admin/pastell/status" \\
   -H "Authorization: Bearer $KEYCLOAK_TOKEN" | jq .`,
             },
             {
@@ -783,7 +804,7 @@ curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \
                 path: "/api/admin/pastell/cursor",
                 description: "Curseur de polling courant (dernier id_j traite, date du dernier poll).",
                 curl: `curl -H "Authorization: Bearer $TOKEN" \\
-  https://projethotel-management.onrender.com/api/admin/pastell/cursor`,
+  https://sejour-backend-production.up.railway.app/api/admin/pastell/cursor`,
             },
             {
                 method: "POST",
@@ -791,7 +812,7 @@ curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \
                 description: "Force un cycle de polling immediat. Requiert SCOPE_pastell-admin.",
                 curl: `curl -X POST \\
   -H "Authorization: Bearer $KEYCLOAK_TOKEN" \\
-  https://projethotel-management.onrender.com/api/admin/pastell/poll`,
+  https://sejour-backend-production.up.railway.app/api/admin/pastell/poll`,
             },
         ],
     },
@@ -803,14 +824,14 @@ curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \
                 path: "/api/admin/pastell-sync?status=&page=&size=",
                 description: "Page de dossiers, filtrable par etape circuit. Renvoie un PagedResponseDTO.",
                 curl: `curl -H "Authorization: Bearer $TOKEN" \\
-  "https://projethotel-management.onrender.com/api/admin/pastell-sync?status=EN_ERREUR&page=0&size=20"`,
+  "https://sejour-backend-production.up.railway.app/api/admin/pastell-sync?status=EN_ERREUR&page=0&size=20"`,
             },
             {
                 method: "GET",
                 path: "/api/admin/pastell-sync/{syncId}/journal",
                 description: "Journal d'orchestration d'un dossier, ordonne du plus ancien au plus recent.",
                 curl: `curl -H "Authorization: Bearer $TOKEN" \\
-  https://projethotel-management.onrender.com/api/admin/pastell-sync/42/journal`,
+  https://sejour-backend-production.up.railway.app/api/admin/pastell-sync/42/journal`,
             },
             {
                 method: "POST",
@@ -818,14 +839,14 @@ curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \
                 description: "Relance manuelle d'un dossier en anomalie.",
                 curl: `curl -X POST \\
   -H "Authorization: Bearer $TOKEN" \\
-  https://projethotel-management.onrender.com/api/admin/pastell-sync/42/retry`,
+  https://sejour-backend-production.up.railway.app/api/admin/pastell-sync/42/retry`,
             },
             {
                 method: "GET",
                 path: "/api/admin/activity?limit=10",
                 description: "Flux d'activite recente du bus, alimente par le journal Pastell.",
                 curl: `curl -H "Authorization: Bearer $TOKEN" \\
-  "https://projethotel-management.onrender.com/api/admin/activity?limit=10"`,
+  "https://sejour-backend-production.up.railway.app/api/admin/activity?limit=10"`,
             },
         ],
     },
@@ -837,7 +858,7 @@ curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \
                 path: "/api/admin/users",
                 description: "Liste de tous les utilisateurs avec leurs roles.",
                 curl: `curl -H "Authorization: Bearer $TOKEN" \\
-  https://projethotel-management.onrender.com/api/admin/users`,
+  https://sejour-backend-production.up.railway.app/api/admin/users`,
             },
             {
                 method: "POST",
@@ -847,7 +868,7 @@ curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"email":"nouveau@example.fr","password":"pass1234","firstName":"Jean","lastName":"Dupont"}' \\
-  "https://projethotel-management.onrender.com/api/admin/users?role=USER"`,
+  "https://sejour-backend-production.up.railway.app/api/admin/users?role=USER"`,
             },
             {
                 method: "DELETE",
@@ -855,7 +876,7 @@ curl -s "https://projethotel-management.onrender.com/api/admin/pastell/status" \
                 description: "Supprime un utilisateur par son identifiant.",
                 curl: `curl -X DELETE \\
   -H "Authorization: Bearer $TOKEN" \\
-  https://projethotel-management.onrender.com/api/admin/users/42`,
+  https://sejour-backend-production.up.railway.app/api/admin/users/42`,
             },
         ],
     },
