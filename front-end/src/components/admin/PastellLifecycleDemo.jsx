@@ -1,5 +1,5 @@
 // src/components/admin/PastellLifecycleDemo.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     Play, Pause, RotateCcw, Info,
     UserPlus, BedDouble, Clock, LogIn, ClipboardList,
@@ -186,7 +186,7 @@ export default function PastellLifecycleDemo() {
                 {scene.visual === "signature" ? (
                     <SignatureAnimation key={index} />
                 ) : (
-                    <StepVisual scene={scene} index={index} />
+                    <StepVisual index={index} />
                 )}
             </div>
 
@@ -272,7 +272,7 @@ export default function PastellLifecycleDemo() {
 // Visuels par etape
 // ============================================================
 
-function StepVisual({ scene, index }) {
+function StepVisual({ index }) {
     const steps = [
         { label: "Inscription",  done: index >= 2 },
         { label: "Reservation",  done: index >= 3 },
